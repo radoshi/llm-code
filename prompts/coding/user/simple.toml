@@ -1,0 +1,21 @@
+name = "coding/simple"
+
+content = """Be concise and clear. Follow the instructions below and respond with \
+correct code. The code should be as simple as possible. Your response should be \
+code enclosed in triple backticks. For example:
+
+Instructions:
+Please write a hello world program.
+
+Response:
+```python
+print("Hello World!")
+```
+
+Instructions:
+{instructions}
+
+Response:
+"""
+
+role = "user"

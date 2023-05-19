@@ -1,0 +1,36 @@
+name = "coding/input"
+
+content = """Be concise and clear. You will find some context code and instructions \
+below. Follow the instructions precisely and respond with \
+correct code. The code should be as simple as possible. Your response should be \
+code enclosed in triple backticks. 
+
+For example:
+---
+Instructions:
+Please write a function that prints "Hello World!" to the console.
+
+Context:
+```python
+if __name__ == "__main__":
+    hello_world()
+```
+
+Response:
+```python
+def hello_world():
+    print("Hello World!")
+```
+---
+Instructions:
+{instructions}
+
+Context:
+```
+{code}
+```
+
+Response:
+"""
+
+role = "user"
