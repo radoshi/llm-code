@@ -28,3 +28,63 @@ Options:
   -i, --inputs TEXT  Glob of input files.
   --help             Show this message and exit.
 ```
+
+## Examples
+
+Simple hello world.
+
+```bash
+llm-code write hello world in rust
+```
+
+```rust
+fn main() {
+    println!("Hello, world!");
+}
+```
+
+Sum of two numbers with type hints.
+
+```bash
+llm-code write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints.
+```
+
+```python
+from typing import List
+
+def sum_numbers(numbers: List[int]) -> int:
+    return sum(numbers)
+```
+
+Lets assume that we stuck the output of the previous call in `out.py`. We can now say:
+
+```bash
+llm-code -i out.py add appropriate docstrings
+```
+
+```python
+from typing import List
+
+def sum_numbers(numbers: List[int]) -> int:
+    """Return the sum of the given list of numbers."""
+    return sum(numbers)
+```
+
+Or we could write some unit tests.
+
+```bash
+llm-code -i out.py write a complete unit test file using pytest.
+```
+
+```python
+import pytest
+
+from typing import List
+from my_module import sum_numbers
+
+
+def test_sum_numbers():
+    assert sum_numbers([1, 2, 3]) == 6
+    assert sum_numbers([-1, 0, 1]) == 0
+    assert sum_numbers([]) == 0
+```
