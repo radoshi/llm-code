@@ -1,0 +1,41 @@
+[tool.poetry]
+name = "llm-code"
+version = "0.1.0"
+description = "An OpenAI LLM based CLI coding assistant."
+authors = ["Rushabh Doshi <radoshi@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "llm_code" }]
+homepage = "https://github.com/radoshi/llm-code"
+repository = "https://github.com/radoshi/llm-code"
+keywords = ["openai", "llm", "cli", "coding", "assistant"]
+classifiers = [
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Code Generators",
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+]
+
+[tool.poetry.scripts]
+llm-code = "llm_code.llm_code:main"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pydantic = { extras = ["dotenv"], version = "^1.10.7" }
+openai = "^0.27.6"
+click = "^8.1.3"
+rich = "^13.3.5"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+isort = "^5.12.0"
+ruff = "^0.0.269"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.3.1"
+pytest-watch = "^4.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
