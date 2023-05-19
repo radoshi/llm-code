@@ -183,5 +183,6 @@ def test_message_from_message():
 def test_message_code():
     message = Message.user_message("```python\nprint('Hello, world!')\n```")
     code = message.code()
+    assert code is not None
     assert code.code == "print('Hello, world!')"
     assert code.lang == "python"

@@ -1,7 +1,6 @@
 from unittest.mock import Mock, patch
 
 from click.testing import CliRunner
-from rich.pretty import pprint
 
 from llm_code.llm_code import load_templates, main
 
@@ -14,7 +13,7 @@ def test_load_templates():
 @patch("llm_code.llm_code.openai.ChatCompletion.create")
 def test_main(mocked_openai):
     mocked_openai.return_value = Mock(
-        choices=[
+        choices=[  # type: ignore
             {
                 "message": {
                     "role": "assistant",

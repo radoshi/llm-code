@@ -2,9 +2,8 @@ from pathlib import Path
 
 import click
 import openai
-from pydantic import BaseSettings, ValidationError
+from pydantic import BaseSettings
 from rich.console import Console
-from rich.pretty import pprint
 from rich.syntax import Syntax
 
 from .templates import Message, TemplateLibrary
@@ -78,7 +77,7 @@ def main(inputs, line_numbers, instructions):
             messages=messages,
         )
 
-    message = Message.from_message(response.choices[0]["message"])
+    message = Message.from_message(response.choices[0]["message"])  # type: ignore
     # console.log(message)
     code = message.code()
     if code:

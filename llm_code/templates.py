@@ -2,7 +2,7 @@ import re
 import string
 from collections import UserDict
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import tomli
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ class Message(BaseModel):
     role: str
     content: str
 
-    def code(self) -> Code:
+    def code(self) -> Optional[Code]:
         match = re.search(r"```(.*?)?\n(.*?)```", self.content, re.DOTALL)
         if match:
             lang = match.group(1).strip()
