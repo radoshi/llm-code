@@ -1,4 +1,6 @@
+import sys
 from pathlib import Path
+from typing import Optional
 
 import click
 import openai
@@ -21,21 +23,12 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
-def load_templates() -> TemplateLibrary:
-    """Load templates from the config directory."""
-    settings = Settings()
-
-    # Load from user config directory
-    templates_dir = settings.config_dir / "prompts"
-    if templates_dir.exists():
-        return TemplateLibrary.from_file_or_directory(templates_dir)
-
-    # Load from package directory
-    templates_dir = Path(__file__).parent.parent / "prompts"
-    if templates_dir.exists():
-        return TemplateLibrary.from_file_or_directory(templates_dir)
-
-    return TemplateLibrary()
+def load_templates(path: Path) -> Optional[TemplateLibrary]:
+    path = path / "prompts"
+    if path.exists():
+        return TemplateLibrary.from_file_or_directory(path)
+    else:
+        return None
 
 
 @click.command()
@@ -50,13 +43,19 @@ def main(inputs, line_numbers, instructions):
     """
     settings = Settings()
     if not settings.openai_api_key:
-        click.UsageError("OPENAI_API_KEY must be set.")
+        raise click.UsageError("OPENAI_API_KEY must be set.")
 
     console = Console()
 
     instructions = " ".join(instructions)
+    if not instructions:
+        raise click.UsageError("Please provide some instructions.")
 
-    library = load_templates()
+    library = load_templates(settings.config_dir) or load_templates(
+        Path(__file__).parent.parent
+    )
+    if not library:
+        raise click.UsageError("No templates found.")
 
     inputs = Path.cwd().glob(inputs) if inputs else []
     input = "\n\n".join([i.read_text() for i in inputs])
@@ -78,13 +77,12 @@ def main(inputs, line_numbers, instructions):
         )
 
     message = Message.from_message(response.choices[0]["message"])  # type: ignore
-    # console.log(message)
     code = message.code()
     if code:
         console.print(Syntax(code.code, code.lang, line_numbers=line_numbers))
-        # console.print(code.code)
     else:
         console.print(f"No code found in message: \n\n{message.content}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

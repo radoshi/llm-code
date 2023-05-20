@@ -88,3 +88,9 @@ def test_sum_numbers():
     assert sum_numbers([-1, 0, 1]) == 0
     assert sum_numbers([]) == 0
 ```
+
+## TODO
+
+- [ ] Add a `--stats` option to output token counts.
+- [ ] Add a simple cache to replay the same query.
+- [ ] Add logging to a local sqllite db.

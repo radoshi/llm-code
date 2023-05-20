@@ -1,4 +1,4 @@
-.PHONY: install build test test-watch test-cov
+.PHONY: install build test test-watch coverage publish
 
 install:
 	@echo "Installing dependencies..."
@@ -16,6 +16,10 @@ test-watch:
 	@echo "Running tests..."
 	@poetry run ptw
 
-test-cov:
+coverage:
 	@echo "Running tests with coverage..."
 	@poetry run pytest --cov llm_code --cov-report term-missing
+
+publish:
+	@echo "Publishing..."
+	@poetry publish --build
