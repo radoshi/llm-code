@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llm-code"
-version = "0.1.0"
+version = "0.1.1"
 description = "An OpenAI LLM based CLI coding assistant."
 authors = ["Rushabh Doshi <radoshi@gmail.com>"]
 license = "MIT"
@@ -15,6 +15,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
 ]
+include = ["prompts/**/*.toml"]
 
 [tool.poetry.scripts]
 llm-code = "llm_code.llm_code:main"
