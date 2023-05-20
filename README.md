@@ -43,6 +43,8 @@ fn main() {
 }
 ```
 
+---
+
 Sum of two numbers with type hints.
 
 ```bash
@@ -55,6 +57,8 @@ from typing import List
 def sum_numbers(numbers: List[int]) -> int:
     return sum(numbers)
 ```
+
+---
 
 Lets assume that we stuck the output of the previous call in `out.py`. We can now say:
 
@@ -69,6 +73,8 @@ def sum_numbers(numbers: List[int]) -> int:
     """Return the sum of the given list of numbers."""
     return sum(numbers)
 ```
+
+---
 
 Or we could write some unit tests.
 
