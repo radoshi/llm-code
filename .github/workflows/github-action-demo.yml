@@ -15,6 +15,10 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: install poetry
+      run: |
+        pip install poetry
+
     - name: make coverage
       run: |
         make install
