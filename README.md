@@ -1,5 +1,9 @@
 # llm-code
 
+![PyPi](https://img.shields.io/pypi/v/llm-code?color=green)
+
+---
+
 An OpenAI LLM based CLI coding assistant.
 
 `llm-code` is inspired by
@@ -13,7 +17,40 @@ a simple tool to create an LLM based assistant that helps write code.
 pipx install llm-code
 ```
 
+## Configuration
+
+`llm-code` requires an OpenAI API key. You can get one from [OpenAI](https://openai.com/).
+
+You can set the key in a few different ways, depending on your preference:
+
+1. Set the `OPENAI_API_KEY` environment variable.
+
+```bash
+export OPENAI_API_KEY = sk-...
+```
+
+2. Use an env file in ~/.llm_code/env
+
+```bash
+mkdir -p ~/.llm_code
+echo "OPENAI_API_KEY=sk-..." > ~/.llm_code/env
+```
+
 ## Usage
+
+`llm-code` is meant to be simple to use. The default prompts should be good enough. There are two broad modes:
+
+1. Generage some code from scratch.
+
+```bash
+llm-code write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints.
+```
+
+2. Give in some input files and ask for changes.
+
+```bash
+llm-code -i my_file.py add docstrings to all python functions.
+```
 
 ```bash
 llm-code --help
@@ -97,6 +134,7 @@ def test_sum_numbers():
 
 ## TODO
 
-- [ ] Add a `--stats` option to output token counts.
 - [ ] Add a simple cache to replay the same query.
+- [ ] Add an `--exec` option to execute the generated code.
+- [ ] Add a `--stats` option to output token counts.
 - [ ] Add logging to a local sqllite db.
