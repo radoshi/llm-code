@@ -8,6 +8,8 @@ from pydantic import BaseSettings
 from rich.console import Console
 from rich.syntax import Syntax
 
+from llm_code import __version__
+
 from .templates import Message, TemplateLibrary
 
 
@@ -34,18 +36,23 @@ def load_templates(path: Path) -> Optional[TemplateLibrary]:
 @click.command()
 @click.option("-i", "--inputs", default=None, help="Glob of input files.")
 @click.option("-ln", "--line-numbers", is_flag=True, help="Show line numbers.")
+@click.option("--version", is_flag=True, help="Show version.")
 @click.argument("instructions", nargs=-1)
-def main(inputs, line_numbers, instructions):
+def main(inputs, line_numbers, instructions, version):
     """Coding assistant using OpenAI's chat models.
 
     Requires OPENAI_API_KEY as an environment variable. Alternately, you can set it in
     ~/.llm_code/env.
     """
+    console = Console()
+
+    if version:
+        console.print(f"[bold green]llm_code[/] version {__version__}")
+        sys.exit(0)
+
     settings = Settings()
     if not settings.openai_api_key:
         raise click.UsageError("OPENAI_API_KEY must be set.")
-
-    console = Console()
 
     instructions = " ".join(instructions)
     if not instructions:
@@ -85,5 +92,7 @@ def main(inputs, line_numbers, instructions):
         sys.exit(1)
 
 
+if __name__ == "__main__":
+    main()
 if __name__ == "__main__":
     main()

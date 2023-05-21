@@ -1,6 +1,7 @@
 # llm-code
 
 ![PyPi](https://img.shields.io/pypi/v/llm-code?color=green)
+[![Coverage Status](https://coveralls.io/repos/github/radoshi/llm-code/badge.svg?branch=main)](https://coveralls.io/github/radoshi/llm-code?branch=main)
 
 ---
 

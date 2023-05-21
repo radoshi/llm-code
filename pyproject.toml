@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "llm-code"
-version = "0.2"
+version = "0.3"
 description = "An OpenAI LLM based CLI coding assistant."
 authors = ["Rushabh Doshi <radoshi+pypi@gmail.com>"]
 license = "MIT"
