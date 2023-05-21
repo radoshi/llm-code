@@ -1,0 +1,33 @@
+name: Coveralls
+
+on: ["push", "pull_request"]
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+    
+    - uses: actions/checkout@v1
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: install poetry
+      run: |
+        pip install poetry
+
+    - name: make coverage
+      run: |
+        make install
+        make coverage
+
+    - name: Test with pytest
+      run: |
+        make test
+
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
+    
