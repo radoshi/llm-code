@@ -4,13 +4,13 @@ from unittest.mock import Mock, patch
 import pytest
 from click.testing import CliRunner
 
-from llm_code import __version__
-from llm_code.llm_code import load_templates, main
-from llm_code.templates import Template
+from llm_code import __version__, db
+from llm_code.llm_code import Settings, get_cached_response, load_templates, main
+from llm_code.templates import Message, Template
 
 
 @patch("llm_code.llm_code.openai.ChatCompletion.create")
-def test_main(mocked_openai):
+def test_main(mocked_openai, tmpdir):
     mocked_openai.return_value = Mock(
         choices=[  # type: ignore
             {
@@ -26,7 +26,7 @@ def test_main(mocked_openai):
         },
     )
 
-    runner = CliRunner(env={"OPENAI_API_KEY": "test"})
+    runner = CliRunner(env={"OPENAI_API_KEY": "test", "CONFIG_DIR": str(tmpdir)})
 
     # Exercise simple code
     result = runner.invoke(main, ["code"])
@@ -38,6 +38,12 @@ def test_main(mocked_openai):
     result = runner.invoke(main, ["--inputs", filename, "code"])
     assert result.exit_code == 0
     assert "print('Hello, world!')" in result.stdout.strip()
+
+    # Exercise with gpt-4
+    result = runner.invoke(main, ["--gpt-4", "code"])
+    assert result.exit_code == 0
+    assert "print('Hello, world!')" in result.stdout.strip()
+    assert mocked_openai.call_args.kwargs["model"] == "gpt-4"
 
 
 @patch("llm_code.llm_code.openai.ChatCompletion.create")
@@ -72,8 +78,8 @@ def test_cli_with_no_command():
     assert "Error: Please provide some instructions." in result.output
 
 
-def test_cli_with_no_api_key():
-    runner = CliRunner()
+def test_cli_with_no_api_key(tmpdir):
+    runner = CliRunner(env={"CONFIG_DIR": str(tmpdir)})
     result = runner.invoke(main, ["Hello"])
     assert result.exit_code == 2
     assert "Error: OPENAI_API_KEY must be set." in result.output
@@ -112,4 +118,55 @@ def test_version(capsys):
         main()
     captured = capsys.readouterr()
     assert f"llm_code version {__version__}" in captured.out
-    assert f"llm_code version {__version__}" in captured.out
+
+
+def test_get_cached_response(tmpdir):
+    settings = Settings(
+        model="gpt-3.5-turbo", temperature=0.8, max_tokens=1000, config_dir=tmpdir
+    )
+    messages = [
+        {"role": "system", "content": "You are a programming expert."},
+        {"role": "user", "content": "Write a function to print 'Hello World!'."},
+    ]
+    _ = db.Database.get(settings.config_dir / "db.sqlite")
+
+    # Test cache miss with no row
+    cached_response = get_cached_response(settings, messages)
+    assert cached_response is None
+
+    # Setup
+    db.write(
+        model=settings.model,
+        temperature=settings.temperature,
+        max_tokens=settings.max_tokens,
+        system_message=messages[0]["content"],
+        user_message=messages[1]["content"],
+        assistant_message="def hello_world():\n    print('Hello World!')",
+        input_tokens=5,
+        output_tokens=5,
+    )
+
+    # Test cache hit
+    cached_response = get_cached_response(settings, messages)
+    assert cached_response is not None
+    assert cached_response.content == "def hello_world():\n    print('Hello World!')"
+
+    # Test cache miss
+    messages[1]["content"] = "Write a function to print 'Hello!'"
+    cached_response = get_cached_response(settings, messages)
+    assert cached_response is None
+
+
+@patch("llm_code.llm_code.get_cached_response")
+def test_cached_response(mocked_cached_response, tmpdir):
+    mocked_cached_response.return_value = Message(
+        role="assistant",
+        content="```python\ndef hello_world():\n    print('Hello World!')```",
+    )
+
+    runner = CliRunner(env={"OPENAI_API_KEY": "test", "CONFIG_DIR": str(tmpdir)})
+
+    # Exercise simple code
+    result = runner.invoke(main, ["code"])
+    assert result.exit_code == 0
+    assert "print('Hello World!')" in result.stdout.strip()
