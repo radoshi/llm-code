@@ -39,12 +39,32 @@ def initdb(config_dir: Path):
     _ = db.Database.get(db_path)
 
 
+def get_cached_response(settings: Settings, messages: list[dict]) -> Optional[Message]:
+    record = db.get_last_inserted_row()
+    if not record:
+        return None
+    if (
+        record.model != settings.model
+        or record.temperature != settings.temperature
+        or record.max_tokens != settings.max_tokens
+        or record.system_message != messages[0]["content"]
+        or record.user_message != messages[1]["content"]
+    ):
+        return None
+
+    return Message(
+        role="assistant",
+        content=record.assistant_message,
+    )
+
+
 @click.command()
 @click.option("-i", "--inputs", default=None, help="Glob of input files.")
 @click.option("-ln", "--line-numbers", is_flag=True, help="Show line numbers.")
+@click.option("-nc", "--no-cache", is_flag=True, help="Don't use cache.")
 @click.option("--version", is_flag=True, help="Show version.")
 @click.argument("instructions", nargs=-1)
-def main(inputs, line_numbers, instructions, version):
+def main(inputs, line_numbers, instructions, version, no_cache):
     """Coding assistant using OpenAI's chat models.
 
     Requires OPENAI_API_KEY as an environment variable. Alternately, you can set it in
@@ -82,27 +102,31 @@ def main(inputs, line_numbers, instructions, version):
 
     messages = [library["coding/system"].message(), message]
 
-    with console.status("[bold green]Asking OpenAI..."):
-        response = openai.ChatCompletion.create(
-            api_key=settings.openai_api_key,
+    cached_response = get_cached_response(settings, messages)
+    if no_cache or not cached_response:
+        with console.status("[bold green]Asking OpenAI..."):
+            response = openai.ChatCompletion.create(
+                api_key=settings.openai_api_key,
+                model=settings.model,
+                temperature=settings.temperature,
+                max_tokens=settings.max_tokens,
+                messages=messages,
+            )
+
+        message = Message.from_message(response.choices[0]["message"])  # type: ignore
+
+        db.write(
             model=settings.model,
             temperature=settings.temperature,
             max_tokens=settings.max_tokens,
-            messages=messages,
+            system_message=messages[0]["content"],
+            user_message=messages[1]["content"],
+            assistant_message=message.content,
+            input_tokens=response.usage["prompt_tokens"],  # type: ignore
+            output_tokens=response.usage["completion_tokens"],  # type: ignore
         )
-
-    message = Message.from_message(response.choices[0]["message"])  # type: ignore
-
-    db.write(
-        model=settings.model,
-        temperature=settings.temperature,
-        max_tokens=settings.max_tokens,
-        system_message=messages[0]["content"],
-        user_message=messages[1]["content"],
-        assistant_message=message.content,
-        input_tokens=response.usage["prompt_tokens"],  # type: ignore
-        output_tokens=response.usage["completion_tokens"],  # type: ignore
-    )
+    else:
+        message = cached_response
 
     code = message.code()
     if code:
