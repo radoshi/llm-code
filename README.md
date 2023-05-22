@@ -60,12 +60,55 @@ llm-code --help
 ```
 Usage: llm-code [OPTIONS] [INSTRUCTIONS]...
 
-  Ask for code completion from OpenAI's chat models.
+  Coding assistant using OpenAI's chat models.
+
+  Requires OPENAI_API_KEY as an environment variable. Alternately, you can set
+  it in ~/.llm_code/env.
 
 Options:
   -i, --inputs TEXT  Glob of input files.
+  -nc, --no-cache    Don't use cache.
+  -4, --gpt-4        Use GPT-4.
+  --version          Show version.
   --help             Show this message and exit.
 ```
+
+## Changing OpenAI parameters
+
+Any of the OpenAI parameters can be changed using environment variables. GPT-4 is one exception: you can also set it using `-4` for convenience.
+
+```bash
+export MAX_TOKENS=2000
+export TEMPERATURE=0.5
+export MODEL=gpt-4
+```
+
+or
+
+```bash
+llm-code -4 ...
+```
+
+## Caching
+
+A common usage pattern is to examine the output of a model and either accept it, or continue to play around with the prompts. When "accepting" the output, a common thing is to append it to a file, or copy it to the clipboard (using `pbcopy` on a mac, for example.). To facilitate this workflow of inspection and acceptance, `llm-code` caches the output of the model in a local sqlite database. This allows you to replay the same query without having to hit the OpenAI API.
+
+```bash
+llm-code 'write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints.'
+```
+
+Following this, assuming you like the output:
+
+```bash
+llm-code 'write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints.' > sum.py
+```
+
+## Database
+
+Borrowing simonw's excellent idea of logging things to a local sqlite, as demonstrated in [`llm`](https://github.com/simonw/llm), `llm-code` also logs all queries to a local sqlite database. This is useful for a few reasons:
+
+1. It allows you to replay the same query without having to hit the OpenAI API.
+2. It allows you to see what queries you've made in the past with responses, and number of tokens used.
 
 ## Examples
 
