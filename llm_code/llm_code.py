@@ -9,8 +9,7 @@ from rich.console import Console
 from rich.syntax import Syntax
 
 from llm_code import __version__, db
-
-from .templates import Message, TemplateLibrary
+from llm_code.templates import Message, TemplateLibrary
 
 
 class Settings(BaseSettings):
