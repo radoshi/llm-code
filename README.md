@@ -178,7 +178,7 @@ def test_sum_numbers():
 
 ## TODO
 
-- [ ] Add a simple cache to replay the same query.
+- [X] Add a simple cache to replay the same query.
+- [X] Add logging to a local sqllite db.
 - [ ] Add an `--exec` option to execute the generated code.
 - [ ] Add a `--stats` option to output token counts.
-- [ ] Add logging to a local sqllite db.
