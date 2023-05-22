@@ -8,7 +8,7 @@ from pydantic import BaseSettings
 from rich.console import Console
 from rich.syntax import Syntax
 
-from llm_code import __version__
+from llm_code import __version__, db
 
 from .templates import Message, TemplateLibrary
 
@@ -33,12 +33,38 @@ def load_templates(path: Path) -> Optional[TemplateLibrary]:
         return None
 
 
+def init_db(config_dir: Path):
+    config_dir.mkdir(parents=True, exist_ok=True)
+    db_path = config_dir / "db.sqlite"
+    _ = db.Database.get(db_path)
+
+
+def get_cached_response(settings: Settings, messages: list[dict]) -> Optional[Message]:
+    record = db.get_last_inserted_row()
+    if not record:
+        return None
+    if (
+        record.model != settings.model
+        or record.temperature != settings.temperature
+        or record.max_tokens != settings.max_tokens
+        or record.system_message != messages[0]["content"]
+        or record.user_message != messages[1]["content"]
+    ):
+        return None
+
+    return Message(
+        role="assistant",
+        content=record.assistant_message,
+    )
+
+
 @click.command()
 @click.option("-i", "--inputs", default=None, help="Glob of input files.")
-@click.option("-ln", "--line-numbers", is_flag=True, help="Show line numbers.")
+@click.option("-nc", "--no-cache", is_flag=True, help="Don't use cache.")
+@click.option("-4", "--gpt-4", is_flag=True, help="Use GPT-4.")
 @click.option("--version", is_flag=True, help="Show version.")
 @click.argument("instructions", nargs=-1)
-def main(inputs, line_numbers, instructions, version):
+def main(inputs, instructions, version, no_cache, gpt_4):
     """Coding assistant using OpenAI's chat models.
 
     Requires OPENAI_API_KEY as an environment variable. Alternately, you can set it in
@@ -51,6 +77,10 @@ def main(inputs, line_numbers, instructions, version):
         sys.exit(0)
 
     settings = Settings()
+    if gpt_4:
+        settings.model = "gpt-4"
+    init_db(settings.config_dir)
+
     if not settings.openai_api_key:
         raise click.UsageError("OPENAI_API_KEY must be set.")
 
@@ -74,19 +104,35 @@ def main(inputs, line_numbers, instructions, version):
 
     messages = [library["coding/system"].message(), message]
 
-    with console.status("[bold green]Asking OpenAI..."):
-        response = openai.ChatCompletion.create(
-            api_key=settings.openai_api_key,
+    cached_response = get_cached_response(settings, messages)
+    if no_cache or not cached_response:
+        with console.status("[bold green]Asking OpenAI..."):
+            response = openai.ChatCompletion.create(
+                api_key=settings.openai_api_key,
+                model=settings.model,
+                temperature=settings.temperature,
+                max_tokens=settings.max_tokens,
+                messages=messages,
+            )
+
+        message = Message.from_message(response.choices[0]["message"])  # type: ignore
+
+        db.write(
             model=settings.model,
             temperature=settings.temperature,
             max_tokens=settings.max_tokens,
-            messages=messages,
+            system_message=messages[0]["content"],
+            user_message=messages[1]["content"],
+            assistant_message=message.content,
+            input_tokens=response.usage["prompt_tokens"],  # type: ignore
+            output_tokens=response.usage["completion_tokens"],  # type: ignore
         )
+    else:
+        message = cached_response
 
-    message = Message.from_message(response.choices[0]["message"])  # type: ignore
     code = message.code()
     if code:
-        console.print(Syntax(code.code, code.lang, line_numbers=line_numbers))
+        console.print(Syntax(code.code, code.lang))
     else:
         console.print(f"No code found in message: \n\n{message.content}")
         sys.exit(1)
