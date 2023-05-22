@@ -33,7 +33,7 @@ def load_templates(path: Path) -> Optional[TemplateLibrary]:
         return None
 
 
-def initdb(config_dir: Path):
+def init_db(config_dir: Path):
     config_dir.mkdir(parents=True, exist_ok=True)
     db_path = config_dir / "db.sqlite"
     _ = db.Database.get(db_path)
@@ -61,9 +61,10 @@ def get_cached_response(settings: Settings, messages: list[dict]) -> Optional[Me
 @click.command()
 @click.option("-i", "--inputs", default=None, help="Glob of input files.")
 @click.option("-nc", "--no-cache", is_flag=True, help="Don't use cache.")
+@click.option("-4", "--gpt-4", is_flag=True, help="Use GPT-4.")
 @click.option("--version", is_flag=True, help="Show version.")
 @click.argument("instructions", nargs=-1)
-def main(inputs, instructions, version, no_cache):
+def main(inputs, instructions, version, no_cache, gpt_4):
     """Coding assistant using OpenAI's chat models.
 
     Requires OPENAI_API_KEY as an environment variable. Alternately, you can set it in
@@ -76,7 +77,9 @@ def main(inputs, instructions, version, no_cache):
         sys.exit(0)
 
     settings = Settings()
-    initdb(settings.config_dir)
+    if gpt_4:
+        settings.model = "gpt-4"
+    init_db(settings.config_dir)
 
     if not settings.openai_api_key:
         raise click.UsageError("OPENAI_API_KEY must be set.")
