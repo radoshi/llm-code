@@ -60,11 +60,10 @@ def get_cached_response(settings: Settings, messages: list[dict]) -> Optional[Me
 
 @click.command()
 @click.option("-i", "--inputs", default=None, help="Glob of input files.")
-@click.option("-ln", "--line-numbers", is_flag=True, help="Show line numbers.")
 @click.option("-nc", "--no-cache", is_flag=True, help="Don't use cache.")
 @click.option("--version", is_flag=True, help="Show version.")
 @click.argument("instructions", nargs=-1)
-def main(inputs, line_numbers, instructions, version, no_cache):
+def main(inputs, instructions, version, no_cache):
     """Coding assistant using OpenAI's chat models.
 
     Requires OPENAI_API_KEY as an environment variable. Alternately, you can set it in
@@ -130,7 +129,7 @@ def main(inputs, line_numbers, instructions, version, no_cache):
 
     code = message.code()
     if code:
-        console.print(Syntax(code.code, code.lang, line_numbers=line_numbers))
+        console.print(Syntax(code.code, code.lang))
     else:
         console.print(f"No code found in message: \n\n{message.content}")
         sys.exit(1)
