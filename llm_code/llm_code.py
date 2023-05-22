@@ -94,5 +94,3 @@ def main(inputs, line_numbers, instructions, version):
 
 if __name__ == "__main__":
     main()
-if __name__ == "__main__":
-    main()

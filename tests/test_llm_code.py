@@ -1,7 +1,10 @@
+import sys
 from unittest.mock import Mock, patch
 
+import pytest
 from click.testing import CliRunner
 
+from llm_code import __version__
 from llm_code.llm_code import load_templates, main
 from llm_code.templates import Template
 
@@ -93,3 +96,12 @@ def test_cli_with_library(mocked_load_templates):
     result = runner.invoke(main, ["Hello"])
     assert result.exit_code == 2
     assert "Error: No templates found." in result.output
+
+
+def test_version(capsys):
+    sys.argv = ["llm_code", "--version"]
+    with pytest.raises(SystemExit):
+        main()
+    captured = capsys.readouterr()
+    assert f"llm_code version {__version__}" in captured.out
+    assert f"llm_code version {__version__}" in captured.out
