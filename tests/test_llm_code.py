@@ -19,7 +19,11 @@ def test_main(mocked_openai):
                     "content": "```python\nprint('Hello, world!')\n```",
                 },
             },
-        ]
+        ],
+        usage={
+            "prompt_tokens": 1,
+            "completion_tokens": 1,
+        },
     )
 
     runner = CliRunner(env={"OPENAI_API_KEY": "test"})
@@ -46,7 +50,11 @@ def test_no_code(mocked_openai):
                     "content": "Random text.",
                 },
             },
-        ]
+        ],
+        usage={
+            "prompt_tokens": 1,
+            "completion_tokens": 1,
+        },
     )
 
     runner = CliRunner(env={"OPENAI_API_KEY": "test"})

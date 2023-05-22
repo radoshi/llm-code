@@ -8,7 +8,7 @@ from pydantic import BaseSettings
 from rich.console import Console
 from rich.syntax import Syntax
 
-from llm_code import __version__
+from llm_code import __version__, db
 
 from .templates import Message, TemplateLibrary
 
@@ -33,6 +33,12 @@ def load_templates(path: Path) -> Optional[TemplateLibrary]:
         return None
 
 
+def initdb(config_dir: Path):
+    config_dir.mkdir(parents=True, exist_ok=True)
+    db_path = config_dir / "db.sqlite"
+    _ = db.Database.get(db_path)
+
+
 @click.command()
 @click.option("-i", "--inputs", default=None, help="Glob of input files.")
 @click.option("-ln", "--line-numbers", is_flag=True, help="Show line numbers.")
@@ -51,6 +57,8 @@ def main(inputs, line_numbers, instructions, version):
         sys.exit(0)
 
     settings = Settings()
+    initdb(settings.config_dir)
+
     if not settings.openai_api_key:
         raise click.UsageError("OPENAI_API_KEY must be set.")
 
@@ -84,6 +92,18 @@ def main(inputs, line_numbers, instructions, version):
         )
 
     message = Message.from_message(response.choices[0]["message"])  # type: ignore
+
+    db.write(
+        model=settings.model,
+        temperature=settings.temperature,
+        max_tokens=settings.max_tokens,
+        system_message=messages[0]["content"],
+        user_message=messages[1]["content"],
+        assistant_message=message.content,
+        input_tokens=response.usage["prompt_tokens"],  # type: ignore
+        output_tokens=response.usage["completion_tokens"],  # type: ignore
+    )
+
     code = message.code()
     if code:
         console.print(Syntax(code.code, code.lang, line_numbers=line_numbers))
