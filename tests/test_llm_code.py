@@ -79,7 +79,7 @@ def test_cli_with_no_command():
 
 
 def test_cli_with_no_api_key(tmpdir):
-    runner = CliRunner(env={"CONFIG_DIR": str(tmpdir)})
+    runner = CliRunner(env={"CONFIG_DIR": str(tmpdir), "OPENAI_API_KEY": ""})
     result = runner.invoke(main, ["Hello"])
     assert result.exit_code == 2
     assert "Error: OPENAI_API_KEY must be set." in result.output

@@ -76,12 +76,12 @@ def main(inputs, instructions, version, no_cache, gpt_4):
         sys.exit(0)
 
     settings = Settings()
+    if not settings.openai_api_key:
+        raise click.UsageError("OPENAI_API_KEY must be set.")
+
     if gpt_4:
         settings.model = "gpt-4"
     init_db(settings.config_dir)
-
-    if not settings.openai_api_key:
-        raise click.UsageError("OPENAI_API_KEY must be set.")
 
     instructions = " ".join(instructions)
     if not instructions:
@@ -131,7 +131,7 @@ def main(inputs, instructions, version, no_cache, gpt_4):
 
     code = message.code()
     if code:
-        console.print(Syntax(code.code, code.lang))
+        console.print(Syntax(code.code, code.lang), soft_wrap=True)
     else:
         console.print(f"No code found in message: \n\n{message.content}")
         sys.exit(1)
