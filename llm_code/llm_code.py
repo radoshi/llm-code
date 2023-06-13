@@ -131,7 +131,7 @@ def main(inputs, instructions, version, no_cache, gpt_4):
 
     code = message.code()
     if code:
-        console.print(Syntax(code.code, code.lang), soft_wrap=True)
+        console.print(Syntax(code.code, code.lang, word_wrap=True))
     else:
         console.print(f"No code found in message: \n\n{message.content}")
         sys.exit(1)
