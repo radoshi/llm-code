@@ -57,8 +57,30 @@ def get_cached_response(settings: Settings, messages: list[dict]) -> Optional[Me
     )
 
 
+def get_code(inputs) -> str:
+    print(inputs)
+    files = [f for input in inputs for f in Path.cwd().glob(input)]
+    file_name = [f.name for f in files]
+    file_texts = [f.read_text() for f in files]
+    file_blobs = [
+        f"FILENAME: {name}\n```{text}\n```"
+        for (name, text) in zip(file_name, file_texts)
+    ]
+    return "\n---\n".join(file_blobs)
+
+
+def get_max_tokens(message: str) -> int:
+    return len(message.split(" "))
+
+
 @click.command()
-@click.option("-i", "--inputs", default=None, help="Glob of input files.")
+@click.option(
+    "-i",
+    "--inputs",
+    default=None,
+    multiple=True,
+    help="Glob of input files. Use repeatedly for multiple files.",
+)
 @click.option("-nc", "--no-cache", is_flag=True, help="Don't use cache.")
 @click.option("-4", "--gpt-4", is_flag=True, help="Use GPT-4.")
 @click.option("--version", is_flag=True, help="Show version.")
@@ -93,11 +115,9 @@ def main(inputs, instructions, version, no_cache, gpt_4):
     if not library:
         raise click.UsageError("No templates found.")
 
-    inputs = Path.cwd().glob(inputs) if inputs else []
-    input = "\n\n".join([i.read_text() for i in inputs])
-
-    if input:
-        message = library["coding/input"].message(code=input, instructions=instructions)
+    if inputs:
+        code = get_code(inputs)
+        message = library["coding/input"].message(code=code, instructions=instructions)
     else:
         message = library["coding/simple"].message(instructions=instructions)
 

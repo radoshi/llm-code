@@ -1,3 +1,4 @@
+import os
 import sys
 from unittest.mock import Mock, patch
 
@@ -5,7 +6,13 @@ import pytest
 from click.testing import CliRunner
 
 from llm_code import __version__, db
-from llm_code.llm_code import Settings, get_cached_response, load_templates, main
+from llm_code.llm_code import (
+    Settings,
+    get_cached_response,
+    get_code,
+    load_templates,
+    main,
+)
 from llm_code.templates import Message, Template
 
 
@@ -170,3 +177,19 @@ def test_cached_response(mocked_cached_response, tmpdir):
     result = runner.invoke(main, ["code"])
     assert result.exit_code == 0
     assert "print('Hello World!')" in result.stdout.strip()
+
+
+def test_get_code(tmpdir):
+    # create some files
+    (tmpdir / "file1.py").write_text("print('Hello from file1')", encoding="utf-8")
+    (tmpdir / "file2.py").write_text("print('Hello from file2')", encoding="utf-8")
+
+    # change the current working directory to tmpdir
+    os.chdir(tmpdir)
+
+    inputs = ["file1.py", "file2.py"]
+    expected_output = (
+        "FILENAME: file1.py\n```print('Hello from file1')\n```\n---\n"
+        "FILENAME: file2.py\n```print('Hello from file2')\n```"
+    )
+    assert get_code(inputs) == expected_output
