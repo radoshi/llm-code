@@ -18,7 +18,7 @@ class Message(BaseModel):
     content: str
 
     def code(self) -> Optional[Code]:
-        match = re.search(r"```(.*?)?\n(.*?)```", self.content, re.DOTALL)
+        match = re.search(r"```(.*?)?\n(.*?)```$", self.content, re.DOTALL)
         if match:
             lang = match.group(1).strip()
             code = match.group(2).strip()

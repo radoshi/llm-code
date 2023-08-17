@@ -186,3 +186,109 @@ def test_message_code():
     assert code is not None
     assert code.code == "print('Hello, world!')"
     assert code.lang == "python"
+
+
+def test_message_code_bug():
+    src = """```python
+import pytest
+from click.testing import CliRunner
+from unittest.mock import Mock, patch
+
+from llm_code.llm_code import main, get_code
+
+@patch("llm_code.llm_code.openai.ChatCompletion.create")
+def test_main(mocked_openai):
+    mocked_openai.return_value = Mock(
+        choices=[
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "```python\nprint('Hello, world!')\n```",
+                },
+            },
+        ],
+        usage={
+            "prompt_tokens": 1,
+            "completion_tokens": 1,
+        },
+    )
+
+    runner = CliRunner(env={"OPENAI_API_KEY": "test"})
+
+    # Exercise simple code
+    result = runner.invoke(main, ["code"])
+    assert result.exit_code == 0
+    assert "print('Hello, world!')" in result.stdout.strip()
+
+    # Exercise with input
+    filename = "LICENSE"
+    result = runner.invoke(main, ["--inputs", filename, "code"])
+    assert result.exit_code == 0
+    assert "print('Hello, world!')" in result.stdout.strip()
+
+    # Exercise with gpt-4
+    result = runner.invoke(main, ["--gpt-4", "code"])
+    assert result.exit_code == 0
+    assert "print('Hello, world!')" in result.stdout.strip()
+    assert mocked_openai.call_args.kwargs["model"] == "gpt-4"
+
+def test_get_code():
+    inputs = ["input1.txt", "input2.txt"]
+    expected_output = "FILENAME: input1.txt\n```content1\n```\n---\nFILENAME: input2.txt\n```content2\n```"
+    code = get_code(inputs)
+    assert code == expected_output
+```"""
+
+    expected = """import pytest
+from click.testing import CliRunner
+from unittest.mock import Mock, patch
+
+from llm_code.llm_code import main, get_code
+
+@patch("llm_code.llm_code.openai.ChatCompletion.create")
+def test_main(mocked_openai):
+    mocked_openai.return_value = Mock(
+        choices=[
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "```python\nprint('Hello, world!')\n```",
+                },
+            },
+        ],
+        usage={
+            "prompt_tokens": 1,
+            "completion_tokens": 1,
+        },
+    )
+
+    runner = CliRunner(env={"OPENAI_API_KEY": "test"})
+
+    # Exercise simple code
+    result = runner.invoke(main, ["code"])
+    assert result.exit_code == 0
+    assert "print('Hello, world!')" in result.stdout.strip()
+
+    # Exercise with input
+    filename = "LICENSE"
+    result = runner.invoke(main, ["--inputs", filename, "code"])
+    assert result.exit_code == 0
+    assert "print('Hello, world!')" in result.stdout.strip()
+
+    # Exercise with gpt-4
+    result = runner.invoke(main, ["--gpt-4", "code"])
+    assert result.exit_code == 0
+    assert "print('Hello, world!')" in result.stdout.strip()
+    assert mocked_openai.call_args.kwargs["model"] == "gpt-4"
+
+def test_get_code():
+    inputs = ["input1.txt", "input2.txt"]
+    expected_output = "FILENAME: input1.txt\n```content1\n```\n---\nFILENAME: input2.txt\n```content2\n```"
+    code = get_code(inputs)
+    assert code == expected_output"""
+
+    message = Message.user_message(src)
+    code = message.code()
+    assert code is not None
+    assert code.code == expected
+    assert code.lang == "python"
