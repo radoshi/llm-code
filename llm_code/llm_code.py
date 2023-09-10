@@ -58,7 +58,6 @@ def get_cached_response(settings: Settings, messages: list[dict]) -> Optional[Me
 
 
 def get_code(inputs) -> str:
-    print(inputs)
     files = [f for input in inputs for f in Path.cwd().glob(input)]
     file_name = [f.name for f in files]
     file_texts = [f.read_text() for f in files]
