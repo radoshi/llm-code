@@ -44,13 +44,13 @@ echo "OPENAI_API_KEY=sk-..." > ~/.llm_code/env
 1. Generage some code from scratch.
 
 ```bash
-llm-code write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints.
+llm-code "write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints."
 ```
 
 2. Give in some input files and ask for changes.
 
 ```bash
-llm-code -i my_file.py add docstrings to all python functions.
+llm-code -i my_file.py "add docstrings to all python functions."
 ```
 
 ```bash
@@ -130,7 +130,7 @@ fn main() {
 Sum of two numbers with type hints.
 
 ```bash
-llm-code write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints.
+llm-code "write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints."
 ```
 
 ```python
@@ -145,7 +145,7 @@ def sum_numbers(numbers: List[int]) -> int:
 Lets assume that we stuck the output of the previous call in `out.py`. We can now say:
 
 ```bash
-llm-code -i out.py add appropriate docstrings
+llm-code -i out.py "add appropriate docstrings"
 ```
 
 ```python
@@ -161,7 +161,7 @@ def sum_numbers(numbers: List[int]) -> int:
 Or we could write some unit tests.
 
 ```bash
-llm-code -i out.py write a complete unit test file using pytest.
+llm-code -i out.py "write a complete unit test file using pytest.
 ```
 
 ```python
