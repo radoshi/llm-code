@@ -4,6 +4,7 @@ from typing import Optional, Tuple
 
 import click
 import openai
+import pyperclip
 from pydantic import BaseSettings
 from rich.console import Console
 from rich.syntax import Syntax
@@ -80,6 +81,7 @@ def get_max_tokens(message: str) -> int:
     multiple=True,
     help="Glob of input files. Use repeatedly for multiple files.",
 )
+@click.option("-cb", "--clipboard", is_flag=True, help="Copy code to clipboard.")
 @click.option("-nc", "--no-cache", is_flag=True, help="Don't use cache.")
 @click.option("-4", "--gpt-4", is_flag=True, help="Use GPT-4.")
 @click.option("--version", is_flag=True, help="Show version.")
@@ -90,6 +92,7 @@ def main(
     version: bool,
     no_cache: bool,
     gpt_4: bool,
+    clipboard: bool,
 ):
     """Coding assistant using OpenAI's chat models.
 
@@ -158,6 +161,8 @@ def main(
     code_block = message.code()
     if code_block:
         console.print(Syntax(code_block.code, code_block.lang, word_wrap=True))
+        if clipboard:
+            pyperclip.copy(code_block.code)
     else:
         console.print(f"No code found in message: \n\n{message.content}")
         sys.exit(1)

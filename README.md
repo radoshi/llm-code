@@ -66,7 +66,8 @@ Usage: llm-code [OPTIONS] [INSTRUCTIONS]...
   it in ~/.llm_code/env.
 
 Options:
-  -i, --inputs TEXT  Glob of input files.
+  -i, --inputs TEXT  Glob of input files. Use repeatedly for multiple files.
+  -cb, --clipboard   Copy code to clipboard.
   -nc, --no-cache    Don't use cache.
   -4, --gpt-4        Use GPT-4.
   --version          Show version.
@@ -182,4 +183,4 @@ def test_sum_numbers():
 - [X] Add logging to a local sqllite db.
 - [ ] Add an `--exec` option to execute the generated code.
 - [ ] Add a `--stats` option to output token counts.
-- [ ] Add `pyperclip` integration to copy to cliboard.
+- [X] Add `pyperclip` integration to copy to clipboard.
