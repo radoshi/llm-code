@@ -1,9 +1,10 @@
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 
 import click
 import openai
+import pyperclip
 from pydantic import BaseSettings
 from rich.console import Console
 from rich.syntax import Syntax
@@ -80,11 +81,19 @@ def get_max_tokens(message: str) -> int:
     multiple=True,
     help="Glob of input files. Use repeatedly for multiple files.",
 )
+@click.option("-cb", "--clipboard", is_flag=True, help="Copy code to clipboard.")
 @click.option("-nc", "--no-cache", is_flag=True, help="Don't use cache.")
 @click.option("-4", "--gpt-4", is_flag=True, help="Use GPT-4.")
 @click.option("--version", is_flag=True, help="Show version.")
 @click.argument("instructions", nargs=-1)
-def main(inputs, instructions, version, no_cache, gpt_4):
+def main(
+    inputs: Optional[Tuple[str, ...]],
+    instructions: Tuple[str, ...],
+    version: bool,
+    no_cache: bool,
+    gpt_4: bool,
+    clipboard: bool,
+):
     """Coding assistant using OpenAI's chat models.
 
     Requires OPENAI_API_KEY as an environment variable. Alternately, you can set it in
@@ -104,7 +113,6 @@ def main(inputs, instructions, version, no_cache, gpt_4):
         settings.model = "gpt-4"
     init_db(settings.config_dir)
 
-    instructions = " ".join(instructions)
     if not instructions:
         raise click.UsageError("Please provide some instructions.")
 
@@ -116,9 +124,11 @@ def main(inputs, instructions, version, no_cache, gpt_4):
 
     if inputs:
         code = get_code(inputs)
-        message = library["coding/input"].message(code=code, instructions=instructions)
+        message = library["coding/input"].message(
+            code=code, instructions=" ".join(instructions)
+        )
     else:
-        message = library["coding/simple"].message(instructions=instructions)
+        message = library["coding/simple"].message(instructions=" ".join(instructions))
 
     messages = [library["coding/system"].message(), message]
 
@@ -148,9 +158,11 @@ def main(inputs, instructions, version, no_cache, gpt_4):
     else:
         message = cached_response
 
-    code = message.code()
-    if code:
-        console.print(Syntax(code.code, code.lang, word_wrap=True))
+    code_block = message.code()
+    if code_block:
+        console.print(Syntax(code_block.code, code_block.lang, word_wrap=True))
+        if clipboard:
+            pyperclip.copy(code_block.code)
     else:
         console.print(f"No code found in message: \n\n{message.content}")
         sys.exit(1)
