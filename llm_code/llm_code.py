@@ -84,6 +84,9 @@ def get_max_tokens(message: str) -> int:
 @click.option("-cb", "--clipboard", is_flag=True, help="Copy code to clipboard.")
 @click.option("-nc", "--no-cache", is_flag=True, help="Don't use cache.")
 @click.option("-4", "--gpt-4", is_flag=True, help="Use GPT-4.")
+@click.option(
+    "-f", "--full", is_flag=True, help="Show complete output instead of just code."
+)
 @click.option("--version", is_flag=True, help="Show version.")
 @click.argument("instructions", nargs=-1)
 def main(
@@ -93,6 +96,7 @@ def main(
     no_cache: bool,
     gpt_4: bool,
     clipboard: bool,
+    full: bool,
 ):
     """Coding assistant using OpenAI's chat models.
 
@@ -158,14 +162,19 @@ def main(
     else:
         message = cached_response
 
-    code_block = message.code()
-    if code_block:
-        console.print(Syntax(code_block.code, code_block.lang, word_wrap=True))
+    if full:
+        console.print(message.content)
         if clipboard:
-            pyperclip.copy(code_block.code)
+            pyperclip.copy(message.content)
     else:
-        console.print(f"No code found in message: \n\n{message.content}")
-        sys.exit(1)
+        code_block = message.code()
+        if code_block:
+            console.print(Syntax(code_block.code, code_block.lang, word_wrap=True))
+            if clipboard:
+                pyperclip.copy(code_block.code)
+        else:
+            console.print(f"No code found in message: \n\n{message.content}")
+            sys.exit(1)
 
 
 if __name__ == "__main__":
