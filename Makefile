@@ -12,9 +12,9 @@ test:
 	@echo "Running tests..."
 	@poetry run pytest
 
-test-watch:
+watch:
 	@echo "Running tests..."
-	@poetry run ptw
+	@poetry run ptw -c
 
 coverage:
 	@echo "Running tests with coverage..."

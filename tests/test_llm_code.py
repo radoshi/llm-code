@@ -2,6 +2,7 @@ import os
 import sys
 from unittest.mock import Mock, patch
 
+import pyperclip
 import pytest
 from click.testing import CliRunner
 
@@ -193,3 +194,20 @@ def test_get_code(tmpdir):
         "FILENAME: file2.py\n```print('Hello from file2')\n```"
     )
     assert get_code(inputs) == expected_output
+
+@patch("llm_code.llm_code.get_cached_response")
+def test_clipboard(mocked_cached_response, tmpdir):
+    mocked_cached_response.return_value = Message(
+        role="assistant",
+        content="```python\ndef hello_world():\n    print('Hello World!')```",
+    )
+
+    runner = CliRunner(env={"OPENAI_API_KEY": "test", "CONFIG_DIR": str(tmpdir)})
+
+    # Exercise simple code
+    result = runner.invoke(main, ["-cb", "code"])
+    assert result.exit_code == 0
+    assert "print('Hello World!')" in result.stdout.strip()
+
+    # Check clipboard
+    assert pyperclip.paste() == "def hello_world():\n    print('Hello World!')"
