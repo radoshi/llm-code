@@ -195,8 +195,12 @@ def test_get_code(tmpdir):
     )
     assert get_code(inputs) == expected_output
 
+
 @patch("llm_code.llm_code.get_cached_response")
 def test_clipboard(mocked_cached_response, tmpdir):
+    if sys.platform != "darwin":
+        pytest.skip("This test is only for macOS.")
+
     mocked_cached_response.return_value = Message(
         role="assistant",
         content="```python\ndef hello_world():\n    print('Hello World!')```",
