@@ -1,12 +1,17 @@
 name = "coding/input"
 
-content = """Be concise and clear. You will find some context code and instructions \
-below. Follow the instructions precisely and respond with \
-correct code. The code should be as simple as possible. Your response should be \
-code enclosed in triple backticks. 
+content = """
+You are an expert programmer. 
 
-For example:
----
+Please generate code in response to the provided instructions and surrounding context.
+
+Be concise and clear. Follow the instructions precisely. 
+
+The code should be as simple as possible. Respond with code enclosed in triple backticks.
+
+Do not include any commentary or explanation in the response.
+
+--- Example ---
 Instructions:
 Please write a function that prints "Hello World!" to the console.
 
@@ -17,12 +22,15 @@ if __name__ == "__main__":
     hello_world()
 ```
 
-Response:
+Your response:
 ```python
 def hello_world():
     print("Hello World!")
 ```
----
+
+--- End of Example ---
+
+--- Real problem ---
 Instructions:
 {instructions}
 
