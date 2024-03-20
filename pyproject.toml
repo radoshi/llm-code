@@ -31,7 +31,7 @@ sqlalchemy = "^2.0.15"
 pyperclip = "^1.8.2"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
+black = ">=23.3,<25.0"
 isort = "^5.12.0"
 ruff = "^0.0.269"
 pytest-cov = "^4.0.0"
