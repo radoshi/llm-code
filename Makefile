@@ -18,7 +18,7 @@ watch:
 
 coverage:
 	@echo "Running tests with coverage..."
-	@poetry run pytest --cov llm_code --cov-report term-missing
+	@poetry run pytest --cov llm_code --cov-report xml
 
 publish:
 	@echo "Publishing..."
