@@ -15,8 +15,8 @@ from llm_code.templates import Message, TemplateLibrary
 
 class Settings(BaseSettings):
     openai_api_key: str = ""
-    model: str = "gpt-3.5-turbo"
-    temperature: float = 0.8
+    model: str = "gpt-4o"
+    temperature: float = 0.2
     max_tokens: int = 1000
     config_dir: Path = Path("~/.llm_code").expanduser()
 
