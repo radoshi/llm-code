@@ -1,7 +1,0 @@
-{
-  "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff"
-  },
-  "python.analysis.typeCheckingMode": "basic",
-  "ruff.path": ["/Users/rushabh/.local/bin/ruff"]
-}
