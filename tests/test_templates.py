@@ -1,5 +1,4 @@
 import pytest
-
 from llm_code.templates import Message, Template, TemplateLibrary
 
 
@@ -36,7 +35,7 @@ def test_save_with_filename(tmp_path):
     template.save(filename)
     assert filename.exists()
     with open(filename) as f:
-        assert f.read() == template.json()
+        assert f.read() == template.model_dump_json()
 
 
 # Test function for the `save` method when a filename is not provided but
@@ -47,7 +46,7 @@ def test_save_without_filename(tmp_path):
     template.save(filename=filename)
     assert filename.exists()
     with open(filename) as f:
-        assert f.read() == template.json()
+        assert f.read() == template.model_dump_json()
 
 
 # Test function for the `save` method when neither filename nor name attribute is
@@ -186,6 +185,7 @@ def test_message_code():
     assert code is not None
     assert code.code == "print('Hello, world!')"
     assert code.lang == "python"
+
 
 def test_message_code_with_explanation():
     response = """

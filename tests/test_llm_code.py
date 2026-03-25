@@ -5,8 +5,6 @@ from unittest.mock import Mock, patch
 import pyperclip
 import pytest
 from click.testing import CliRunner
-
-from llm_code import __version__, db
 from llm_code.llm_code import (
     Settings,
     get_cached_response,
@@ -16,64 +14,65 @@ from llm_code.llm_code import (
 )
 from llm_code.templates import Message, Template
 
+from llm_code import __version__, db
 
-@patch("llm_code.llm_code.openai.ChatCompletion.create")
+
+@patch("llm_code.llm_code.OpenAI")
 def test_main(mocked_openai, tmpdir):
-    mocked_openai.return_value = Mock(
-        choices=[  # type: ignore
-            {
-                "message": {
-                    "role": "assistant",
-                    "content": "```python\nprint('Hello, world!')\n```",
-                },
-            },
+    mocked_openai.return_value.chat.completions.create.return_value = Mock(
+        choices=[
+            Mock(
+                message=Mock(
+                    role="assistant",
+                    content="```python\nprint('Hello, world!')\n```",
+                )
+            )
         ],
-        usage={
-            "prompt_tokens": 1,
-            "completion_tokens": 1,
-        },
+        usage=Mock(
+            prompt_tokens=1,
+            completion_tokens=1,
+        ),
     )
 
     runner = CliRunner(env={"OPENAI_API_KEY": "test", "CONFIG_DIR": str(tmpdir)})
 
-    # Exercise simple code
     result = runner.invoke(main, ["code"])
     assert result.exit_code == 0
     assert "print('Hello, world!')" in result.stdout.strip()
 
-    # Exercise with input
     filename = "LICENSE"
     result = runner.invoke(main, ["--inputs", filename, "code"])
     assert result.exit_code == 0
     assert "print('Hello, world!')" in result.stdout.strip()
 
-    # Exercise with gpt-4
     result = runner.invoke(main, ["--gpt-4", "code"])
     assert result.exit_code == 0
     assert "print('Hello, world!')" in result.stdout.strip()
-    assert mocked_openai.call_args.kwargs["model"] == "gpt-4"
+    assert (
+        mocked_openai.return_value.chat.completions.create.call_args.kwargs["model"]
+        == "gpt-4"
+    )
 
 
-@patch("llm_code.llm_code.openai.ChatCompletion.create")
+@patch("llm_code.llm_code.OpenAI")
 def test_no_code(mocked_openai):
-    mocked_openai.return_value = Mock(
-        choices=[  # type: ignore
-            {
-                "message": {
-                    "role": "assistant",
-                    "content": "Random text.",
-                },
-            },
+    mocked_openai.return_value.chat.completions.create.return_value = Mock(
+        choices=[
+            Mock(
+                message=Mock(
+                    role="assistant",
+                    content="Random text.",
+                )
+            )
         ],
-        usage={
-            "prompt_tokens": 1,
-            "completion_tokens": 1,
-        },
+        usage=Mock(
+            prompt_tokens=1,
+            completion_tokens=1,
+        ),
     )
 
     runner = CliRunner(env={"OPENAI_API_KEY": "test"})
 
-    # Exercise simple code
     result = runner.invoke(main, ["code"])
     assert result.exit_code == 1
     assert "No code found in message" in result.stdout.strip()
@@ -130,7 +129,10 @@ def test_version(capsys):
 
 def test_get_cached_response(tmpdir):
     settings = Settings(
-        model="gpt-3.5-turbo", temperature=0.8, max_tokens=1000, config_dir=tmpdir
+        model="gpt-3.5-turbo",
+        temperature=0.8,
+        max_tokens=1000,
+        config_dir=os.fspath(tmpdir),
     )
     messages = [
         {"role": "system", "content": "You are a programming expert."},
@@ -138,11 +140,9 @@ def test_get_cached_response(tmpdir):
     ]
     _ = db.Database.get(settings.config_dir / "db.sqlite")
 
-    # Test cache miss with no row
     cached_response = get_cached_response(settings, messages)
     assert cached_response is None
 
-    # Setup
     db.write(
         model=settings.model,
         temperature=settings.temperature,
@@ -154,12 +154,10 @@ def test_get_cached_response(tmpdir):
         output_tokens=5,
     )
 
-    # Test cache hit
     cached_response = get_cached_response(settings, messages)
     assert cached_response is not None
     assert cached_response.content == "def hello_world():\n    print('Hello World!')"
 
-    # Test cache miss
     messages[1]["content"] = "Write a function to print 'Hello!'"
     cached_response = get_cached_response(settings, messages)
     assert cached_response is None
@@ -174,18 +172,15 @@ def test_cached_response(mocked_cached_response, tmpdir):
 
     runner = CliRunner(env={"OPENAI_API_KEY": "test", "CONFIG_DIR": str(tmpdir)})
 
-    # Exercise simple code
     result = runner.invoke(main, ["code"])
     assert result.exit_code == 0
     assert "print('Hello World!')" in result.stdout.strip()
 
 
 def test_get_code(tmpdir):
-    # create some files
     (tmpdir / "file1.py").write_text("print('Hello from file1')", encoding="utf-8")
     (tmpdir / "file2.py").write_text("print('Hello from file2')", encoding="utf-8")
 
-    # change the current working directory to tmpdir
     os.chdir(tmpdir)
 
     inputs = ["file1.py", "file2.py"]
@@ -208,10 +203,8 @@ def test_clipboard(mocked_cached_response, tmpdir):
 
     runner = CliRunner(env={"OPENAI_API_KEY": "test", "CONFIG_DIR": str(tmpdir)})
 
-    # Exercise simple code
     result = runner.invoke(main, ["-cb", "code"])
     assert result.exit_code == 0
     assert "print('Hello World!')" in result.stdout.strip()
 
-    # Check clipboard
     assert pyperclip.paste() == "def hello_world():\n    print('Hello World!')"

@@ -1,11 +1,10 @@
 import sys
 from pathlib import Path
-from typing import Optional, Tuple
 
 import click
-import openai
 import pyperclip
-from pydantic import BaseSettings
+from openai import OpenAI
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich.console import Console
 from rich.syntax import Syntax
 
@@ -20,17 +19,17 @@ class Settings(BaseSettings):
     max_tokens: int = 1000
     config_dir: Path = Path("~/.llm_code").expanduser()
 
-    class Config:
-        env_file = Path("~/.llm_code").expanduser() / "env"
-        env_file_encoding = "utf-8"
+    model_config = SettingsConfigDict(
+        env_file=Path("~/.llm_code").expanduser() / "env",
+        env_file_encoding="utf-8",
+    )
 
 
-def load_templates(path: Path) -> Optional[TemplateLibrary]:
+def load_templates(path: Path) -> TemplateLibrary | None:
     path = path / "prompts"
     if path.exists():
         return TemplateLibrary.from_file_or_directory(path)
-    else:
-        return None
+    return None
 
 
 def init_db(config_dir: Path):
@@ -39,7 +38,7 @@ def init_db(config_dir: Path):
     _ = db.Database.get(db_path)
 
 
-def get_cached_response(settings: Settings, messages: list[dict]) -> Optional[Message]:
+def get_cached_response(settings: Settings, messages: list[dict]) -> Message | None:
     record = db.get_last_inserted_row()
     if not record:
         return None
@@ -59,12 +58,12 @@ def get_cached_response(settings: Settings, messages: list[dict]) -> Optional[Me
 
 
 def get_code(inputs) -> str:
-    files = [f for input in inputs for f in Path.cwd().glob(input)]
-    file_name = [f.name for f in files]
-    file_texts = [f.read_text() for f in files]
+    files = [f for input_path in inputs for f in Path.cwd().glob(input_path)]
+    file_names = [f.name for f in files]
+    file_texts = [f.read_text(encoding="utf-8") for f in files]
     file_blobs = [
         f"FILENAME: {name}\n```{text}\n```"
-        for (name, text) in zip(file_name, file_texts)
+        for (name, text) in zip(file_names, file_texts, strict=True)
     ]
     return "\n---\n".join(file_blobs)
 
@@ -90,8 +89,8 @@ def get_max_tokens(message: str) -> int:
 @click.option("--version", is_flag=True, help="Show version.")
 @click.argument("instructions", nargs=-1)
 def main(
-    inputs: Optional[Tuple[str, ...]],
-    instructions: Tuple[str, ...],
+    inputs: tuple[str, ...] | None,
+    instructions: tuple[str, ...],
     version: bool,
     no_cache: bool,
     gpt_4: bool,
@@ -138,16 +137,20 @@ def main(
 
     cached_response = get_cached_response(settings, messages)
     if no_cache or not cached_response:
+        client = OpenAI(api_key=settings.openai_api_key)
         with console.status("[bold green]Asking OpenAI..."):
-            response = openai.ChatCompletion.create(
-                api_key=settings.openai_api_key,
+            response = client.chat.completions.create(
                 model=settings.model,
                 temperature=settings.temperature,
                 max_tokens=settings.max_tokens,
                 messages=messages,
             )
 
-        message = Message.from_message(response.choices[0]["message"])  # type: ignore
+        response_message = response.choices[0].message
+        message = Message(
+            role=response_message.role,
+            content=response_message.content or "",
+        )
 
         db.write(
             model=settings.model,
@@ -156,8 +159,8 @@ def main(
             system_message=messages[0]["content"],
             user_message=messages[1]["content"],
             assistant_message=message.content,
-            input_tokens=response.usage["prompt_tokens"],  # type: ignore
-            output_tokens=response.usage["completion_tokens"],  # type: ignore
+            input_tokens=response.usage.prompt_tokens if response.usage else 0,
+            output_tokens=response.usage.completion_tokens if response.usage else 0,
         )
     else:
         message = cached_response

@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 from sqlalchemy import Column, DateTime, Engine, Integer, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session
@@ -45,7 +44,7 @@ class Database:
         return Session(cls._engine)
 
 
-def get_last_inserted_row() -> Optional[DBModel]:
+def get_last_inserted_row() -> DBModel | None:
     with Database.session() as s:
         return s.query(DBModel).order_by(DBModel.id.desc()).first()
 

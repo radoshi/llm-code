@@ -3,34 +3,52 @@
 ![PyPi](https://img.shields.io/pypi/v/llm-code?color=green)
 [![Coverage Status](https://coveralls.io/repos/github/radoshi/llm-code/badge.svg?branch=main)](https://coveralls.io/github/radoshi/llm-code?branch=main)
 
----
-
-An OpenAI LLM based CLI coding assistant.
+An OpenAI-based CLI coding assistant.
 
 `llm-code` is inspired by
-[Simon Wilson](https://simonwillison.net/2023/May/18/cli-tools-for-llms/)'s
-[llm](https://github.com/simonw/llm) package. It takes a similar approach of developing
-a simple tool to create an LLM based assistant that helps write code.
+[Simon Willison](https://simonwillison.net/2023/May/18/cli-tools-for-llms/)'s
+[`llm`](https://github.com/simonw/llm). It focuses on a simple command-line workflow for
+asking an LLM to generate or modify code.
 
-## Installation
+## Requirements
+
+- Python `3.14.3`
+- An `OPENAI_API_KEY`
+- [`uv`](https://docs.astral.sh/uv/)
+
+## Development setup
 
 ```bash
-pipx install llm-code
+uv sync --all-groups
+```
+
+This project uses:
+
+- `uv` for environment and dependency management
+- `ruff` for linting and formatting
+- `ty` for type checking
+- `pytest` for tests
+- `just` for common development commands
+
+If you use `pyenv`, `mise`, or another version manager, `.python-version` is set to:
+
+```text
+3.14.3
 ```
 
 ## Configuration
 
 `llm-code` requires an OpenAI API key. You can get one from [OpenAI](https://openai.com/).
 
-You can set the key in a few different ways, depending on your preference:
+You can configure it in either of these ways:
 
-1. Set the `OPENAI_API_KEY` environment variable.
+1. Set the `OPENAI_API_KEY` environment variable:
 
 ```bash
-export OPENAI_API_KEY = sk-...
+export OPENAI_API_KEY=sk-...
 ```
 
-2. Use an env file in ~/.llm_code/env
+2. Use an env file at `~/.llm_code/env`:
 
 ```bash
 mkdir -p ~/.llm_code
@@ -39,84 +57,73 @@ echo "OPENAI_API_KEY=sk-..." > ~/.llm_code/env
 
 ## Usage
 
-`llm-code` is meant to be simple to use. The default prompts should be good enough. There are two broad modes:
-
-1. Generage some code from scratch.
+Generate code from scratch:
 
 ```bash
-llm-code "write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints."
+uv run llm-code "write a function that takes a list of numbers and returns the sum in python. Add type hints."
 ```
 
-2. Give in some input files and ask for changes.
+Pass one or more input files and ask for changes:
 
 ```bash
-llm-code -i my_file.py "add docstrings to all python functions."
+uv run llm-code -i my_file.py "add docstrings to all python functions"
 ```
+
+Show help:
 
 ```bash
-llm-code --help
+uv run llm-code --help
 ```
 
-```
-Usage: llm-code [OPTIONS] [INSTRUCTIONS]...
+## OpenAI parameters
 
-  Coding assistant using OpenAI's chat models.
+The app reads settings from environment variables and `~/.llm_code/env`.
 
-  Requires OPENAI_API_KEY as an environment variable. Alternately, you can set
-  it in ~/.llm_code/env.
-
-Options:
-  -i, --inputs TEXT  Glob of input files. Use repeatedly for multiple files.
-  -cb, --clipboard   Copy code to clipboard.
-  -nc, --no-cache    Don't use cache.
-  -4, --gpt-4        Use GPT-4.
-  --version          Show version.
-  --help             Show this message and exit.
-```
-
-## Changing OpenAI parameters
-
-Any of the OpenAI parameters can be changed using environment variables. GPT-4 is one exception: you can also set it using `-4` for convenience.
+Examples:
 
 ```bash
-export MAX_TOKENS=2000
-export TEMPERATURE=0.5
 export MODEL=gpt-4
+export TEMPERATURE=0.5
+export MAX_TOKENS=2000
 ```
 
-or
+Or use the convenience flag:
 
 ```bash
-llm-code -4 ...
+uv run llm-code -4 "review this code"
 ```
 
 ## Caching
 
-A common usage pattern is to examine the output of a model and either accept it, or continue to play around with the prompts. When "accepting" the output, a common thing is to append it to a file, or copy it to the clipboard (using `pbcopy` on a mac, for example.). To facilitate this workflow of inspection and acceptance, `llm-code` caches the output of the model in a local sqlite database. This allows you to replay the same query without having to hit the OpenAI API.
+`llm-code` caches responses in a local SQLite database. This makes it easy to replay the
+same prompt without making another API call.
+
+Example:
 
 ```bash
-llm-code 'write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints.'
+uv run llm-code "write a function that takes a list of numbers and returns the sum in python. Add type hints."
 ```
 
-Following this, assuming you like the output:
+Then, if you want to save the output:
 
 ```bash
-llm-code 'write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints.' > sum.py
+uv run llm-code "write a function that takes a list of numbers and returns the sum in python. Add type hints." > sum.py
 ```
 
 ## Database
 
-Borrowing simonw's excellent idea of logging things to a local sqlite, as demonstrated in [`llm`](https://github.com/simonw/llm), `llm-code` also logs all queries to a local sqlite database. This is useful for a few reasons:
+Like `llm`, this project logs requests and responses to a local SQLite database. That is
+useful for:
 
-1. It allows you to replay the same query without having to hit the OpenAI API.
-2. It allows you to see what queries you've made in the past with responses, and number of tokens used.
+1. Replaying previous queries without calling the API again
+2. Inspecting past prompts, responses, and token counts
 
 ## Examples
 
-Simple hello world.
+Simple hello world:
 
 ```bash
-llm-code write hello world in rust
+uv run llm-code "write hello world in rust"
 ```
 
 ```rust
@@ -125,27 +132,10 @@ fn main() {
 }
 ```
 
----
-
-Sum of two numbers with type hints.
+Add docstrings to an existing file:
 
 ```bash
-llm-code "write a function that takes a list of numbers and returns the sum of the numbers in python. Add type hints."
-```
-
-```python
-from typing import List
-
-def sum_numbers(numbers: List[int]) -> int:
-    return sum(numbers)
-```
-
----
-
-Lets assume that we stuck the output of the previous call in `out.py`. We can now say:
-
-```bash
-llm-code -i out.py "add appropriate docstrings"
+uv run llm-code -i out.py "add appropriate docstrings"
 ```
 
 ```python
@@ -156,18 +146,15 @@ def sum_numbers(numbers: List[int]) -> int:
     return sum(numbers)
 ```
 
----
-
-Or we could write some unit tests.
+Generate tests:
 
 ```bash
-llm-code -i out.py "write a complete unit test file using pytest.
+uv run llm-code -i out.py "write a complete unit test file using pytest"
 ```
 
 ```python
 import pytest
 
-from typing import List
 from my_module import sum_numbers
 
 
@@ -177,10 +164,25 @@ def test_sum_numbers():
     assert sum_numbers([]) == 0
 ```
 
+## Development commands
+
+With `just` installed:
+
+```bash
+just install
+just fmt
+just lint
+just typecheck
+just test
+just coverage
+just build
+just check
+```
+
 ## TODO
 
-- [X] Add a simple cache to replay the same query.
-- [X] Add logging to a local sqllite db.
-- [ ] Add an `--exec` option to execute the generated code.
-- [ ] Add a `--stats` option to output token counts.
-- [X] Add `pyperclip` integration to copy to clipboard.
+- [x] Add a simple cache to replay the same query
+- [x] Add logging to a local SQLite database
+- [ ] Add an `--exec` option to execute the generated code
+- [ ] Add a `--stats` option to output token counts
+- [x] Add `pyperclip` integration to copy to clipboard
