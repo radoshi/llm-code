@@ -1,25 +1,17 @@
 import asyncio
 
 import click
-from pydantic_ai import Agent
-from pydantic_ai.capabilities import Thinking
 from rich.console import Console
 
 from llm_code import __version__
+from llm_code.agent import build_agent
 from llm_code.settings import Settings
 
-DEFAULT_INSTRUCTIONS = "You are an expert at coding."
 
+async def run_prompt(prompt: str, *, console: Console, model: str) -> None:
+    """Run the coding agent with a prompt and stream its response."""
+    agent = build_agent(model)
 
-def build_agent(model: str) -> Agent:
-    return Agent(
-        model,
-        instructions=DEFAULT_INSTRUCTIONS,
-        capabilities=[Thinking(effort="high")],
-    )
-
-
-async def run_prompt(prompt: str, *, console: Console, agent: Agent) -> None:
     async with agent.run_stream(prompt) as result:
         async for chunk in result.stream_text(delta=True, debounce_by=None):
             console.print(chunk, end="", markup=False, highlight=False)
@@ -34,10 +26,9 @@ def main(prompt: tuple[str, ...]) -> None:
     """Run the coding agent with PROMPT and stream the response."""
     console = Console()
     settings = Settings.load()
-    agent = build_agent(settings.model)
     user_prompt = " ".join(prompt).strip()
 
-    asyncio.run(run_prompt(user_prompt, console=console, agent=agent))
+    asyncio.run(run_prompt(user_prompt, console=console, model=settings.model))
 
 
 if __name__ == "__main__":
