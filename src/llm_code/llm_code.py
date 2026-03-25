@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 
 import click
@@ -30,18 +31,25 @@ def build_agent(model: str) -> Agent:
     )
 
 
+async def run_prompt(prompt: str, *, console: Console, agent: Agent) -> None:
+    async with agent.run_stream(prompt) as result:
+        async for chunk in result.stream_text(delta=True, debounce_by=None):
+            console.print(chunk, end="", markup=False, highlight=False)
+
+    console.print()
+
+
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(version=__version__, prog_name="llm_code")
 @click.argument("prompt", nargs=-1, required=True)
 def main(prompt: tuple[str, ...]) -> None:
-    """Run the coding agent with PROMPT and print the response."""
+    """Run the coding agent with PROMPT and stream the response."""
     console = Console()
     settings = Settings()
     agent = build_agent(settings.model)
     user_prompt = " ".join(prompt).strip()
 
-    result = agent.run_sync(user_prompt)
-    console.print(result.output, markup=False)
+    asyncio.run(run_prompt(user_prompt, console=console, agent=agent))
 
 
 if __name__ == "__main__":
