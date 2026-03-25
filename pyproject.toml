@@ -44,14 +44,14 @@ requires = ["hatchling==1.29.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["llm_code"]
+packages = ["src/llm_code"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "prompts" = "prompts"
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "/llm_code",
+  "/src",
   "/prompts",
   "/tests",
   "/README.md",
@@ -61,7 +61,7 @@ include = [
 [tool.ruff]
 target-version = "py314"
 line-length = 88
-src = ["llm_code", "tests"]
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = [

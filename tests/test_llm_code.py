@@ -5,6 +5,8 @@ from unittest.mock import Mock, patch
 import pyperclip
 import pytest
 from click.testing import CliRunner
+
+from llm_code import __version__, db
 from llm_code.llm_code import (
     Settings,
     get_cached_response,
@@ -13,8 +15,6 @@ from llm_code.llm_code import (
     main,
 )
 from llm_code.templates import Message, Template
-
-from llm_code import __version__, db
 
 
 @patch("llm_code.llm_code.OpenAI")

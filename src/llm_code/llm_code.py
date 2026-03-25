@@ -120,7 +120,7 @@ def main(
         raise click.UsageError("Please provide some instructions.")
 
     library = load_templates(settings.config_dir) or load_templates(
-        Path(__file__).parent.parent
+        Path(__file__).parent.parent.parent
     )
     if not library:
         raise click.UsageError("No templates found.")
