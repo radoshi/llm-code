@@ -1,24 +1,12 @@
 import asyncio
-from pathlib import Path
 
 import click
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import Thinking
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich.console import Console
 
 from llm_code import __version__
-
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=Path("~/.llm_code/env").expanduser(),
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-    model: str = "openai:gpt-5.4"
-
+from llm_code.settings import Settings
 
 DEFAULT_INSTRUCTIONS = "You are an expert at coding."
 
@@ -45,7 +33,7 @@ async def run_prompt(prompt: str, *, console: Console, agent: Agent) -> None:
 def main(prompt: tuple[str, ...]) -> None:
     """Run the coding agent with PROMPT and stream the response."""
     console = Console()
-    settings = Settings()
+    settings = Settings.load()
     agent = build_agent(settings.model)
     user_prompt = " ".join(prompt).strip()
 
