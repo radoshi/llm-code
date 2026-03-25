@@ -15,8 +15,8 @@ classifiers = [
 requires-python = ">=3.14.3,<3.15"
 dependencies = [
   "click==8.3.1",
-  "openai==2.29.0",
   "pydantic==2.12.5",
+  "pydantic-ai-slim[anthropic,google,openai]==1.71.0",
   "pydantic-settings==2.13.1",
   "pyperclip==1.11.0",
   "rich==14.3.3",
