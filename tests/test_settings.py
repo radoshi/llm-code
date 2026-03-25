@@ -4,21 +4,28 @@ import pytest
 
 from llm_code.settings import (
     Settings,
-    find_project_config,
-    get_user_config_path,
-    load_config_file,
+    _get_project_config,
+    _get_user_config,
+    _load_config_file,
 )
 
 
-def test_get_user_config_path_uses_xdg_config_home() -> None:
-    env = {"XDG_CONFIG_HOME": "/tmp/xdg-config"}
+def test_get_user_config_uses_xdg_config_home(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    xdg_config_home = tmp_path / "xdg-config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config_home))
 
-    path = get_user_config_path(env=env)
+    config_path = xdg_config_home / "llm_code" / "config.toml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text('model = "xdg-model"\n', encoding="utf-8")
 
-    assert path == Path("/tmp/xdg-config/llm_code/config.toml")
+    config = _get_user_config()
+
+    assert config == {"model": "xdg-model"}
 
 
-def test_find_project_config_uses_closest_parent(tmp_path: Path) -> None:
+def test_get_project_config_uses_closest_parent(tmp_path: Path) -> None:
     root_config = tmp_path / ".config.yaml"
     root_config.write_text("model: root-model\n", encoding="utf-8")
 
@@ -28,10 +35,10 @@ def test_find_project_config_uses_closest_parent(tmp_path: Path) -> None:
     nested_config = tmp_path / "project" / ".config.yaml"
     nested_config.write_text("model: nested-model\n", encoding="utf-8")
 
-    path = find_project_config(nested_dir)
+    config = _get_project_config(cwd=nested_dir)
 
-    assert path == nested_config
-    assert path != root_config
+    assert config == {"model": "nested-model"}
+    assert config != {"model": "root-model"}
 
 
 def test_settings_load_merges_user_then_project_then_env(
@@ -79,4 +86,4 @@ def test_load_config_file_rejects_non_mapping_yaml(tmp_path: Path) -> None:
     config_path.write_text("- one\n- two\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="key-value pairs"):
-        load_config_file(config_path)
+        _load_config_file(config_path)
