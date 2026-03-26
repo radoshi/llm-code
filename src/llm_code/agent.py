@@ -63,7 +63,7 @@ def _read_files(path: str) -> dict[str, str]:
 
 def _write_file(path: str, content: str) -> str:
     """Write content to a single file relative to the current working directory."""
-    target = Path(path)
+    target = _resolve_relative_path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
     return f"Wrote {target}"
@@ -162,11 +162,17 @@ def _search_with_grep(
 
 def _resolve_paths(path: str) -> list[Path]:
     """Resolve a relative file path or glob pattern into a sorted list of files."""
+    _validate_relative_path_input(path)
+
     candidate = Path(path)
     if candidate.is_file():
-        return [candidate]
+        return [_resolve_relative_path(path)]
 
-    files = sorted(file for file in Path().glob(path) if file.is_file())
+    files = sorted(
+        _ensure_within_cwd(file.resolve()).relative_to(Path.cwd().resolve())
+        for file in Path().glob(path)
+        if file.is_file()
+    )
     return files
 
 
@@ -175,20 +181,54 @@ def _resolve_search_targets(path: str) -> list[Path]:
     if path in {"", "."}:
         return [Path(".")]
 
+    _validate_relative_path_input(path)
     candidate = Path(path)
     if candidate.exists():
-        return [candidate]
+        resolved = _ensure_within_cwd(candidate.resolve())
+        return [resolved.relative_to(Path.cwd().resolve())]
 
-    matches = sorted(Path().glob(path))
+    matches = sorted(
+        _ensure_within_cwd(match.resolve()).relative_to(Path.cwd().resolve())
+        for match in Path().glob(path)
+    )
     if matches:
         return matches
 
     return [candidate]
 
 
+def _resolve_relative_path(path: str) -> Path:
+    """Resolve one relative path and ensure it stays within the current directory."""
+    _validate_relative_path_input(path)
+    resolved = _ensure_within_cwd(Path(path).resolve())
+    return resolved.relative_to(Path.cwd().resolve())
+
+
+def _validate_relative_path_input(path: str) -> None:
+    """Reject absolute or parent-traversing paths before file operations."""
+    path_obj = Path(path)
+    if path_obj.is_absolute() or ".." in path_obj.parts:
+        raise ValueError("Paths must stay within the current working directory")
+
+
+def _ensure_within_cwd(path: Path) -> Path:
+    """Ensure a resolved path is within the current working directory."""
+    cwd = Path.cwd().resolve()
+
+    try:
+        path.relative_to(cwd)
+    except ValueError as exc:
+        raise ValueError(
+            "Paths must stay within the current working directory"
+        ) from exc
+
+    return path
+
+
 def _normalize_result_path(path: str) -> str:
-    """Normalize tool output paths to clean relative paths."""
-    return path.removeprefix("./")
+    """Normalize search output paths and keep them within the current directory."""
+    normalized = path.removeprefix("./")
+    return str(_resolve_relative_path(normalized))
 
 
 def _add_match(

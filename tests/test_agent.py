@@ -1,6 +1,8 @@
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from llm_code.agent import _read_files, _search_files, _write_file
 
 
@@ -28,6 +30,13 @@ def test_read_files_reads_a_glob(tmp_path: Path, monkeypatch) -> None:
     }
 
 
+def test_read_files_rejects_paths_outside_cwd(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ValueError, match="current working directory"):
+        _read_files("../secret.txt")
+
+
 def test_write_file_writes_a_single_file(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
 
@@ -35,6 +44,13 @@ def test_write_file_writes_a_single_file(tmp_path: Path, monkeypatch) -> None:
 
     assert message == "Wrote nested/out.txt"
     assert (tmp_path / "nested/out.txt").read_text(encoding="utf-8") == "hello"
+
+
+def test_write_file_rejects_paths_outside_cwd(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ValueError, match="current working directory"):
+        _write_file("../out.txt", "hello")
 
 
 def test_search_files_returns_grouped_matches_with_context_from_glob(
@@ -100,6 +116,13 @@ def test_search_files_accepts_direct_file_paths(tmp_path: Path, monkeypatch) -> 
             ],
         }
     ]
+
+
+def test_search_files_rejects_paths_outside_cwd(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    with pytest.raises(ValueError, match="current working directory"):
+        _search_files("hello", path="../src/*.py", context_lines=1)
 
 
 def test_search_files_falls_back_to_grep_when_rg_is_unavailable(
