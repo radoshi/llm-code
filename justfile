@@ -16,7 +16,7 @@ watch:
 # Generate a coverage report in XML format.
 coverage:
 	@echo "Running tests with coverage..."
-	@uv run pytest --cov llm_code --cov-report xml
+	@uv run pytest --cov llm_code --cov-report html
 
 # Lint the codebase with Ruff.
 lint:
