@@ -1,188 +1,165 @@
 # llm-code
 
-![PyPi](https://img.shields.io/pypi/v/llm-code?color=green)
-[![Coverage Status](https://coveralls.io/repos/github/radoshi/llm-code/badge.svg?branch=main)](https://coveralls.io/github/radoshi/llm-code?branch=main)
+`llm-code` is a small command-line coding agent built on top of
+[pydantic-ai](https://ai.pydantic.dev/).
 
-An OpenAI-based CLI coding assistant.
+The current goal is simple: run an agent from your terminal, let it inspect and modify
+files in the current project, and stream the model's response back to stdout.
 
-`llm-code` is inspired by
-[Simon Willison](https://simonwillison.net/2023/May/18/cli-tools-for-llms/)'s
-[`llm`](https://github.com/simonw/llm). It focuses on a simple command-line workflow for
-asking an LLM to generate or modify code.
+## What it does
 
-## Requirements
+Today, the CLI is intentionally minimal:
 
-- Python `3.14.3`
-- An `OPENAI_API_KEY`
-- [`uv`](https://docs.astral.sh/uv/)
+```bash
+uv run llm_code "write hello world"
+```
 
-## Development setup
+Everything after `llm_code` is treated as the prompt. The tool loads configuration,
+constructs an agent, and streams the result to the terminal.
+
+The agent currently has access to a few local tools:
+
+- `read`: read a file or glob of files under the current working directory
+- `write`: write a single file under the current working directory
+- `search`: search files by regex, using `rg` when available and `grep` as a fallback
+- `bash`: execute a shell command in the current working directory
+
+## Architecture overview
+
+The codebase is deliberately split into a few small modules.
+
+### `src/llm_code/llm_code.py`
+
+This is the CLI entrypoint.
+
+It is responsible for:
+
+- parsing the command line with `click`
+- loading settings
+- joining the remaining CLI arguments into a single prompt string
+- building the runtime agent
+- streaming the final output to the terminal with `rich`
+
+### `src/llm_code/settings.py`
+
+This module handles configuration loading and precedence.
+
+Current settings precedence is:
+
+1. built-in defaults
+2. user config from `XDG_CONFIG_HOME/llm_code/config.toml`
+3. fallback user config from `~/.config/llm_code/config.toml`
+4. nearest project config found by walking upward for `.config.yaml`
+5. environment variables
+
+In other words, project config overrides user config, and environment variables override
+both.
+
+At the moment, settings are modeled with a small `pydantic` model.
+
+### `src/llm_code/agent.py`
+
+This module builds the `pydantic_ai.Agent` and registers its tools.
+
+The agent currently uses:
+
+- a fixed instruction string
+- a configurable model name from settings
+- `Thinking(effort="high")`
+
+It also contains the implementation details for the agent tools.
+
+#### Tool design
+
+The current tools are local-first and cwd-scoped.
+
+- file reads, writes, and searches are restricted to the current working directory
+- absolute paths and `..` traversal are rejected for file-oriented tools
+- search results are normalized back to relative paths
+
+Tool summary:
+
+- `read(path)`
+  - accepts a relative path or glob
+  - returns a mapping of file paths to file contents
+- `write(path, content)`
+  - writes one file
+  - creates parent directories as needed
+- `search(pattern, path=".", context_lines=2)`
+  - searches with `rg --json` when available
+  - falls back to `grep -R -n -E`
+  - returns grouped matches with a small numbered context snippet
+- `bash(command)`
+  - executes a shell command with `shell=True`
+  - returns `returncode`, `stdout`, and `stderr`
+
+The `bash` tool is intentionally permissive right now and should be treated as unsafe.
+
+## Testing
+
+Tests live in `tests/`.
+
+Current coverage focuses on:
+
+- settings precedence and config loading
+- file tool behavior
+- search behavior, including `rg` fallback to `grep`
+- path safety for read/write/search
+- bash command execution
+
+Run tests with:
+
+```bash
+uv run pytest
+```
+
+## Development
+
+Install dependencies:
 
 ```bash
 uv sync --all-groups
 ```
 
-This project uses:
-
-- `uv` for environment and dependency management
-- `ruff` for linting and formatting
-- `ty` for type checking
-- `pytest` for tests
-- `just` for common development commands
-
-If you use `pyenv`, `mise`, or another version manager, `.python-version` is set to:
-
-```text
-3.14.3
-```
-
-## Configuration
-
-`llm-code` requires an OpenAI API key. You can get one from [OpenAI](https://openai.com/).
-
-You can configure it in either of these ways:
-
-1. Set the `OPENAI_API_KEY` environment variable:
+Run the CLI:
 
 ```bash
-export OPENAI_API_KEY=sk-...
+uv run llm_code "summarize this repository"
 ```
 
-2. Use an env file at `~/.llm_code/env`:
+Run lint and tests:
 
 ```bash
-mkdir -p ~/.llm_code
-echo "OPENAI_API_KEY=sk-..." > ~/.llm_code/env
+uv run ruff check src tests
+uv run pytest
 ```
 
-## Usage
+## Status
 
-Generate code from scratch:
+This project is in an early, exploratory stage.
 
-```bash
-uv run llm-code "write a function that takes a list of numbers and returns the sum in python. Add type hints."
-```
+The current implementation is intentionally small so the core architecture is easy to
+change:
 
-Pass one or more input files and ask for changes:
-
-```bash
-uv run llm-code -i my_file.py "add docstrings to all python functions"
-```
-
-Show help:
-
-```bash
-uv run llm-code --help
-```
-
-## OpenAI parameters
-
-The app reads settings from environment variables and `~/.llm_code/env`.
-
-Examples:
-
-```bash
-export MODEL=gpt-4
-export TEMPERATURE=0.5
-export MAX_TOKENS=2000
-```
-
-Or use the convenience flag:
-
-```bash
-uv run llm-code -4 "review this code"
-```
-
-## Caching
-
-`llm-code` caches responses in a local SQLite database. This makes it easy to replay the
-same prompt without making another API call.
-
-Example:
-
-```bash
-uv run llm-code "write a function that takes a list of numbers and returns the sum in python. Add type hints."
-```
-
-Then, if you want to save the output:
-
-```bash
-uv run llm-code "write a function that takes a list of numbers and returns the sum in python. Add type hints." > sum.py
-```
-
-## Database
-
-Like `llm`, this project logs requests and responses to a local SQLite database. That is
-useful for:
-
-1. Replaying previous queries without calling the API again
-2. Inspecting past prompts, responses, and token counts
-
-## Examples
-
-Simple hello world:
-
-```bash
-uv run llm-code "write hello world in rust"
-```
-
-```rust
-fn main() {
-    println!("Hello, world!");
-}
-```
-
-Add docstrings to an existing file:
-
-```bash
-uv run llm-code -i out.py "add appropriate docstrings"
-```
-
-```python
-from typing import List
-
-def sum_numbers(numbers: List[int]) -> int:
-    """Return the sum of the given list of numbers."""
-    return sum(numbers)
-```
-
-Generate tests:
-
-```bash
-uv run llm-code -i out.py "write a complete unit test file using pytest"
-```
-
-```python
-import pytest
-
-from my_module import sum_numbers
-
-
-def test_sum_numbers():
-    assert sum_numbers([1, 2, 3]) == 6
-    assert sum_numbers([-1, 0, 1]) == 0
-    assert sum_numbers([]) == 0
-```
-
-## Development commands
-
-With `just` installed:
-
-```bash
-just install
-just fmt
-just lint
-just typecheck
-just test
-just coverage
-just build
-just check
-```
+- simple CLI
+- simple settings model
+- one agent module
+- local tools with lightweight tests
 
 ## TODO
 
-- [x] Add a simple cache to replay the same query
-- [x] Add logging to a local SQLite database
-- [ ] Add an `--exec` option to execute the generated code
-- [ ] Add a `--stats` option to output token counts
-- [x] Add `pyperclip` integration to copy to clipboard
+- improve the system prompt and overall agent behavior
+- add better tool result formatting so prompts stay compact
+- add truncation and size limits for large file reads and large search results
+- add stdin and richer project-context input modes
+- add better search filtering and more useful snippets
+- add structured logging / execution traces for debugging agent runs
+- add streaming or incremental feedback for long-running tool calls
+- add approval flows for dangerous tool use
+- add timeouts for shell execution
+- add output truncation for shell execution
+- add command allow/deny rules for shell execution
+- add explicit approval before executing shell commands
+- add sandboxing for shell commands
+- add no-network execution mode for shell commands
+- add stronger filesystem isolation beyond starting in the current working directory
