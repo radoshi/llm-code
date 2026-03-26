@@ -10,7 +10,7 @@ from pydantic import BaseModel
 class Settings(BaseModel):
     """Application settings loaded from defaults, config files, and environment."""
 
-    model: str = "openai-responses:gpt-5.4"
+    model: str = "openai-responses:gpt-5.3-codex"
 
     @classmethod
     def load(
