@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 from pathlib import Path
 
@@ -11,7 +12,7 @@ def test_read_files_reads_a_single_file(tmp_path: Path, monkeypatch) -> None:
     file_path = tmp_path / "hello.txt"
     file_path.write_text("hello world\n", encoding="utf-8")
 
-    result = _read_files("hello.txt")
+    result = asyncio.run(_read_files("hello.txt"))
 
     assert result == {"hello.txt": "hello world\n"}
 
@@ -22,7 +23,7 @@ def test_read_files_reads_a_glob(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / "b.py").write_text("print('b')\n", encoding="utf-8")
     (tmp_path / "notes.txt").write_text("ignore\n", encoding="utf-8")
 
-    result = _read_files("*.py")
+    result = asyncio.run(_read_files("*.py"))
 
     assert result == {
         "a.py": "print('a')\n",
@@ -34,13 +35,13 @@ def test_read_files_rejects_paths_outside_cwd(tmp_path: Path, monkeypatch) -> No
     monkeypatch.chdir(tmp_path)
 
     with pytest.raises(ValueError, match="current working directory"):
-        _read_files("../secret.txt")
+        asyncio.run(_read_files("../secret.txt"))
 
 
 def test_write_file_writes_a_single_file(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
 
-    message = _write_file("nested/out.txt", "hello")
+    message = asyncio.run(_write_file("nested/out.txt", "hello"))
 
     assert message == "Wrote nested/out.txt"
     assert (tmp_path / "nested/out.txt").read_text(encoding="utf-8") == "hello"
@@ -50,13 +51,13 @@ def test_write_file_rejects_paths_outside_cwd(tmp_path: Path, monkeypatch) -> No
     monkeypatch.chdir(tmp_path)
 
     with pytest.raises(ValueError, match="current working directory"):
-        _write_file("../out.txt", "hello")
+        asyncio.run(_write_file("../out.txt", "hello"))
 
 
 def test_run_bash_executes_a_command(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
 
-    result = _run_bash("printf 'hello'")
+    result = asyncio.run(_run_bash("printf 'hello'"))
 
     assert result == {"returncode": 0, "stdout": "hello", "stderr": ""}
 
@@ -75,7 +76,7 @@ def test_search_files_returns_grouped_matches_with_context_from_glob(
         encoding="utf-8",
     )
 
-    result = _search_files("hello", path="src/*.py", context_lines=1)
+    result = asyncio.run(_search_files("hello", path="src/*.py", context_lines=1))
 
     assert result == [
         {
@@ -111,7 +112,7 @@ def test_search_files_accepts_direct_file_paths(tmp_path: Path, monkeypatch) -> 
         encoding="utf-8",
     )
 
-    result = _search_files("hello", path="src/app.py", context_lines=1)
+    result = asyncio.run(_search_files("hello", path="src/app.py", context_lines=1))
 
     assert result == [
         {
@@ -130,7 +131,7 @@ def test_search_files_rejects_paths_outside_cwd(tmp_path: Path, monkeypatch) -> 
     monkeypatch.chdir(tmp_path)
 
     with pytest.raises(ValueError, match="current working directory"):
-        _search_files("hello", path="../src/*.py", context_lines=1)
+        asyncio.run(_search_files("hello", path="../src/*.py", context_lines=1))
 
 
 def test_search_files_falls_back_to_grep_when_rg_is_unavailable(
@@ -153,7 +154,7 @@ def test_search_files_falls_back_to_grep_when_rg_is_unavailable(
 
     monkeypatch.setattr("llm_code.agent.subprocess.run", fake_run)
 
-    result = _search_files("hello", path="app.py", context_lines=1)
+    result = asyncio.run(_search_files("hello", path="app.py", context_lines=1))
 
     assert result == [
         {
