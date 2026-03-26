@@ -33,12 +33,12 @@ def _build_event_handler(
 def _format_tool_call_status(event: FunctionToolCallEvent) -> str:
     """Format a human-friendly status line for a tool call."""
     tool_name = event.part.tool_name
-    args = event.part.args if isinstance(event.part.args, dict) else {}
+    args = _tool_args_as_dict(event.part.args)
 
     if tool_name == "read":
-        return f"[yellow]Read[/yellow] {_format_value(args.get('path'))}"
+        return f"[yellow]Read[/yellow] {_format_value(args.get('path', '?'))}"
     if tool_name == "write":
-        return f"[yellow]Write[/yellow] {_format_value(args.get('path'))}"
+        return f"[yellow]Write[/yellow] {_format_value(args.get('path', '?'))}"
     if tool_name == "search":
         search_path = _format_value(args.get('path', '.'))
         pattern = _format_value(args.get('pattern'))
@@ -50,6 +50,20 @@ def _format_tool_call_status(event: FunctionToolCallEvent) -> str:
         f"[yellow]{tool_name}[/yellow] "
         f"{_format_tool_args(event.part.args)}"
     )
+
+
+def _tool_args_as_dict(args: Any) -> dict[str, Any]:
+    """Convert tool arguments into a dictionary when possible."""
+    if isinstance(args, dict):
+        return args
+    if isinstance(args, str):
+        try:
+            parsed = json.loads(args)
+        except json.JSONDecodeError:
+            return {}
+        if isinstance(parsed, dict):
+            return parsed
+    return {}
 
 
 def _format_value(value: Any, *, max_length: int = 80) -> str:
