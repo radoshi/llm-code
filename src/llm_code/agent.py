@@ -52,6 +52,15 @@ def build_agent(model: str) -> Agent:
         """
         return _search_files(pattern, path=path, context_lines=context_lines)
 
+    @agent.tool_plain
+    def bash(command: str) -> dict[str, Any]:
+        """Execute a shell command in the current working directory.
+
+        Args:
+            command: The shell command to execute.
+        """
+        return _run_bash(command)
+
     return agent
 
 
@@ -90,6 +99,23 @@ def _search_files(
         targets=targets,
         context_lines=context_lines,
     )
+
+
+def _run_bash(command: str) -> dict[str, Any]:
+    """Execute a shell command in the current working directory."""
+    result = subprocess.run(
+        command,
+        shell=True,
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=Path.cwd(),
+    )
+    return {
+        "returncode": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+    }
 
 
 def _search_with_rg(

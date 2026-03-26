@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from llm_code.agent import _read_files, _search_files, _write_file
+from llm_code.agent import _read_files, _run_bash, _search_files, _write_file
 
 
 def test_read_files_reads_a_single_file(tmp_path: Path, monkeypatch) -> None:
@@ -51,6 +51,14 @@ def test_write_file_rejects_paths_outside_cwd(tmp_path: Path, monkeypatch) -> No
 
     with pytest.raises(ValueError, match="current working directory"):
         _write_file("../out.txt", "hello")
+
+
+def test_run_bash_executes_a_command(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    result = _run_bash("printf 'hello'")
+
+    assert result == {"returncode": 0, "stdout": "hello", "stderr": ""}
 
 
 def test_search_files_returns_grouped_matches_with_context_from_glob(
