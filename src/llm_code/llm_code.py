@@ -4,8 +4,9 @@ from collections.abc import AsyncIterable, Awaitable, Callable
 from typing import Any
 
 import click
-from pydantic_ai.messages import FunctionToolCallEvent, FunctionToolResultEvent
+from pydantic_ai.messages import FunctionToolCallEvent, PartStartEvent
 from rich.console import Console
+from rich.status import Status
 
 from llm_code import __version__
 from llm_code.agent import build_agent
@@ -13,51 +14,85 @@ from llm_code.settings import Settings
 
 
 def _build_event_handler(
-    console: Console,
+    status: Status,
 ) -> Callable[[Any, AsyncIterable[Any]], Awaitable[None]]:
-    """Build an event handler that prints tool call events while the agent runs."""
+    """Build an event handler that updates a status line while the agent runs."""
 
     async def _handle_agent_events(_ctx: Any, event_stream: AsyncIterable[Any]) -> None:
         async for event in event_stream:
-            if isinstance(event, FunctionToolCallEvent):
-                args = _format_tool_args(event.part.args)
-                console.print(
-                    f"[dim][tool call][/dim] {event.part.tool_name}({args})",
-                    highlight=False,
-                )
-            elif isinstance(event, FunctionToolResultEvent):
-                result = event.result
-                if hasattr(result, "outcome"):
-                    console.print(
-                        "[dim][tool result][/dim] "
-                        f"{result.tool_name} [{result.outcome}]",
-                        highlight=False,
-                    )
+            if isinstance(event, PartStartEvent) and event.part.part_kind == "thinking":
+                status.update("[cyan]Thinking[/cyan]")
+            elif isinstance(event, FunctionToolCallEvent):
+                status.update(_format_tool_call_status(event))
+            elif isinstance(event, PartStartEvent) and event.part.part_kind == "text":
+                status.stop()
 
     return _handle_agent_events
 
 
-def _format_tool_args(args: Any) -> str:
-    """Format tool call arguments for compact event logging."""
+def _format_tool_call_status(event: FunctionToolCallEvent) -> str:
+    """Format a human-friendly status line for a tool call."""
+    tool_name = event.part.tool_name
+    args = event.part.args if isinstance(event.part.args, dict) else {}
+
+    if tool_name == "read":
+        return f"[yellow]Read[/yellow] {_format_value(args.get('path'))}"
+    if tool_name == "write":
+        return f"[yellow]Write[/yellow] {_format_value(args.get('path'))}"
+    if tool_name == "search":
+        search_path = _format_value(args.get('path', '.'))
+        pattern = _format_value(args.get('pattern'))
+        return f"[yellow]Search[/yellow] {search_path} for {pattern}"
+    if tool_name == "bash":
+        return f"[yellow]Bash[/yellow] {_format_value(args.get('command'))}"
+
+    return (
+        f"[yellow]{tool_name}[/yellow] "
+        f"{_format_tool_args(event.part.args)}"
+    )
+
+
+def _format_value(value: Any, *, max_length: int = 80) -> str:
+    """Format one value for compact display in the status line."""
+    if value is None:
+        text = ""
+    elif isinstance(value, str):
+        text = value
+    else:
+        text = json.dumps(value, ensure_ascii=False)
+
+    if len(text) > max_length:
+        return f"{text[: max_length - 1]}…"
+    return text
+
+
+def _format_tool_args(args: Any, *, max_length: int = 80) -> str:
+    """Format tool call arguments for compact status updates."""
     if isinstance(args, dict):
-        return json.dumps(args, ensure_ascii=False)
-    if isinstance(args, str):
-        return args
-    return repr(args)
+        text = json.dumps(args, ensure_ascii=False)
+    elif isinstance(args, str):
+        text = args
+    else:
+        text = repr(args)
+
+    if len(text) > max_length:
+        return f"{text[: max_length - 1]}…"
+    return text
 
 
 async def run_prompt(prompt: str, *, console: Console, model: str) -> None:
     """Run the coding agent with a prompt and stream its response."""
     agent = build_agent(model)
     event_console = Console(stderr=True)
-    event_handler = _build_event_handler(event_console)
 
-    async with agent.run_stream(
-        prompt,
-        event_stream_handler=event_handler,
-    ) as result:
-        async for chunk in result.stream_text(delta=True, debounce_by=None):
-            console.print(chunk, end="", markup=False, highlight=False)
+    with event_console.status("[cyan]Thinking[/cyan]") as status:
+        event_handler = _build_event_handler(status)
+        async with agent.run_stream(
+            prompt,
+            event_stream_handler=event_handler,
+        ) as result:
+            async for chunk in result.stream_text(delta=True, debounce_by=None):
+                console.print(chunk, end="", markup=False, highlight=False)
 
     console.print()
 
