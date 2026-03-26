@@ -5,11 +5,14 @@ from typing import Any
 
 import click
 from pydantic_ai.messages import FunctionToolCallEvent, PartStartEvent
+from pydantic_ai.models import Model
 from rich.console import Console
 from rich.status import Status
 
 from llm_code import __version__
 from llm_code.agent import build_agent
+from llm_code.models import build_models
+from llm_code.providers import build_providers
 from llm_code.settings import Settings
 from llm_code.tui import launch_tui
 
@@ -95,12 +98,11 @@ def _format_tool_args(args: Any, *, max_length: int = 80) -> str:
 async def run_prompt(
     prompt: str,
     *,
+    model: Model,
     console: Console,
-    model: str,
-    api_key: str | None = None,
 ) -> None:
     """Run the coding agent with a prompt and stream its response."""
-    agent = build_agent(model, api_key=api_key)
+    agent = build_agent(model)
     event_console = Console(stderr=True)
 
     with event_console.status("[cyan]Thinking[/cyan]") as status:
@@ -121,6 +123,13 @@ async def run_prompt(
 def main(prompt: tuple[str, ...]) -> None:
     """Run the coding agent with PROMPT or launch the TUI when no prompt is given."""
     settings = Settings.load()
+    providers = build_providers(settings)
+    models = build_models(providers)
+
+    model = models.get(settings.model)
+    if model is None:
+        raise ValueError(f"Model {settings.model} not found")
+
     user_prompt = " ".join(prompt).strip()
 
     if user_prompt:
@@ -129,13 +138,12 @@ def main(prompt: tuple[str, ...]) -> None:
             run_prompt(
                 user_prompt,
                 console=console,
-                model=settings.model,
-                api_key=settings.api_key,
+                model=model,
             )
         )
         return
 
-    launch_tui(model=settings.model, api_key=settings.api_key)
+    launch_tui(model=model)
 
 
 if __name__ == "__main__":

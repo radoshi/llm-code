@@ -1,6 +1,7 @@
 import asyncio
 from typing import Any
 
+from pydantic_ai.models import Model
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.message import Message
@@ -31,6 +32,10 @@ class PromptInput(TextArea):
 class LlmCodeApp(App[None]):
     """A minimal TUI for chatting with the coding agent."""
 
+    BINDINGS = [
+        Binding("ctrl+c", "quit", "Quit", show=False, priority=True),
+    ]
+
     CSS = """
     Screen {
         layout: vertical;
@@ -45,10 +50,10 @@ class LlmCodeApp(App[None]):
     }
     """
 
-    def __init__(self, *, model: str, api_key: str | None = None) -> None:
+    def __init__(self, *, model: Model) -> None:
         super().__init__()
         self._model = model
-        self._agent = build_agent(model, api_key=api_key)
+        self._agent = build_agent(model)
         self._transcript = ""
         self._pending_task: asyncio.Task[Any] | None = None
 
@@ -112,7 +117,7 @@ class LlmCodeApp(App[None]):
         output.scroll_end(animate=False)
 
 
-def launch_tui(*, model: str, api_key: str | None = None) -> None:
+def launch_tui(*, model: Model) -> None:
     """Launch the Textual TUI."""
-    app = LlmCodeApp(model=model, api_key=api_key)
+    app = LlmCodeApp(model=model)
     app.run()

@@ -4,17 +4,15 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import BaseModel
 
 
 class Settings(BaseModel):
     """Application settings loaded from defaults, config files, and environment."""
 
-    model: str = "openai-responses:gpt-5.3-codex"
-    api_key: str | None = Field(
-        default=None,
-        validation_alias=AliasChoices("api_key", "OPENAI_API_KEY"),
-    )
+    model: str = "gpt-5.3-codex"
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
 
     @classmethod
     def load(
@@ -81,7 +79,8 @@ def _load_config_file(path: Path) -> dict[str, Any]:
 
 
 _ENV_ALIASES: dict[str, list[str]] = {
-    "api_key": ["OPENAI_API_KEY"],
+    "openai_api_key": ["OPENAI_API_KEY"],
+    "anthropic_api_key": ["ANTHROPIC_API_KEY"],
 }
 
 
