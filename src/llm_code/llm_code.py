@@ -11,6 +11,7 @@ from rich.status import Status
 from llm_code import __version__
 from llm_code.agent import build_agent
 from llm_code.settings import Settings
+from llm_code.tui import launch_tui
 
 
 def _build_event_handler(
@@ -40,16 +41,13 @@ def _format_tool_call_status(event: FunctionToolCallEvent) -> str:
     if tool_name == "write":
         return f"[yellow]Write[/yellow] {_format_value(args.get('path', '?'))}"
     if tool_name == "search":
-        search_path = _format_value(args.get('path', '.'))
-        pattern = _format_value(args.get('pattern'))
+        search_path = _format_value(args.get("path", "."))
+        pattern = _format_value(args.get("pattern"))
         return f"[yellow]Search[/yellow] {search_path} for {pattern}"
     if tool_name == "bash":
         return f"[yellow]Bash[/yellow] {_format_value(args.get('command'))}"
 
-    return (
-        f"[yellow]{tool_name}[/yellow] "
-        f"{_format_tool_args(event.part.args)}"
-    )
+    return f"[yellow]{tool_name}[/yellow] {_format_tool_args(event.part.args)}"
 
 
 def _tool_args_as_dict(args: Any) -> dict[str, Any]:
@@ -94,9 +92,15 @@ def _format_tool_args(args: Any, *, max_length: int = 80) -> str:
     return text
 
 
-async def run_prompt(prompt: str, *, console: Console, model: str) -> None:
+async def run_prompt(
+    prompt: str,
+    *,
+    console: Console,
+    model: str,
+    api_key: str | None = None,
+) -> None:
     """Run the coding agent with a prompt and stream its response."""
-    agent = build_agent(model)
+    agent = build_agent(model, api_key=api_key)
     event_console = Console(stderr=True)
 
     with event_console.status("[cyan]Thinking[/cyan]") as status:
@@ -113,14 +117,25 @@ async def run_prompt(prompt: str, *, console: Console, model: str) -> None:
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(version=__version__, prog_name="llm_code")
-@click.argument("prompt", nargs=-1, required=True)
+@click.argument("prompt", nargs=-1)
 def main(prompt: tuple[str, ...]) -> None:
-    """Run the coding agent with PROMPT and stream the response."""
-    console = Console()
+    """Run the coding agent with PROMPT or launch the TUI when no prompt is given."""
     settings = Settings.load()
     user_prompt = " ".join(prompt).strip()
 
-    asyncio.run(run_prompt(user_prompt, console=console, model=settings.model))
+    if user_prompt:
+        console = Console()
+        asyncio.run(
+            run_prompt(
+                user_prompt,
+                console=console,
+                model=settings.model,
+                api_key=settings.api_key,
+            )
+        )
+        return
+
+    launch_tui(model=settings.model, api_key=settings.api_key)
 
 
 if __name__ == "__main__":

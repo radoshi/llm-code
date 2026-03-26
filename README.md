@@ -8,14 +8,18 @@ files in the current project, and stream the model's response back to stdout.
 
 ## What it does
 
-Today, the CLI is intentionally minimal:
+Today, the CLI has two entry modes:
 
 ```bash
 uv run llm_code "write hello world"
+uv run llm_code
 ```
 
-Everything after `llm_code` is treated as the prompt. The tool loads configuration,
-constructs an agent, and streams the result to the terminal.
+- If you pass arguments, everything after `llm_code` is treated as one prompt string.
+- If you pass no prompt, `llm-code` launches a small Textual TUI.
+
+In CLI mode, the tool loads configuration, constructs an agent, and streams the result
+to the terminal.
 
 The agent currently has access to a few local tools:
 
@@ -37,8 +41,20 @@ It is responsible for:
 - parsing the command line with `click`
 - loading settings
 - joining the remaining CLI arguments into a single prompt string
+- launching the Textual TUI when no prompt is provided
 - building the runtime agent
 - streaming the final output to the terminal with `rich`
+
+### `src/llm_code/tui.py`
+
+This module contains the initial Textual interface.
+
+Right now it is intentionally minimal:
+
+- a read-only output area at the top
+- a multiline prompt box at the bottom
+- `Enter` submits the prompt
+- `Shift+Enter` inserts a newline
 
 ### `src/llm_code/settings.py`
 

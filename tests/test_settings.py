@@ -87,3 +87,75 @@ def test_load_config_file_rejects_non_mapping_yaml(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="key-value pairs"):
         _load_config_file(config_path)
+
+
+def test_api_key_from_config_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home_dir = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", lambda: home_dir)
+
+    user_config = home_dir / ".config" / "llm_code" / "config.yaml"
+    user_config.parent.mkdir(parents=True)
+    user_config.write_text("OPENAI_API_KEY: sk-from-config\n", encoding="utf-8")
+
+    settings = Settings.load(cwd=tmp_path, env={})
+
+    assert settings.api_key == "sk-from-config"
+
+
+def test_api_key_from_env_var(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home_dir = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", lambda: home_dir)
+
+    settings = Settings.load(cwd=tmp_path, env={"OPENAI_API_KEY": "sk-from-env"})
+
+    assert settings.api_key == "sk-from-env"
+
+
+def test_api_key_env_overrides_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home_dir = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", lambda: home_dir)
+
+    user_config = home_dir / ".config" / "llm_code" / "config.yaml"
+    user_config.parent.mkdir(parents=True)
+    user_config.write_text("OPENAI_API_KEY: sk-from-config\n", encoding="utf-8")
+
+    settings = Settings.load(cwd=tmp_path, env={"OPENAI_API_KEY": "sk-from-env"})
+
+    assert settings.api_key == "sk-from-env"
+
+
+def test_get_user_config_reads_yaml(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    xdg_config_home = tmp_path / "xdg-config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config_home))
+
+    config_path = xdg_config_home / "llm_code" / "config.yaml"
+    config_path.parent.mkdir(parents=True)
+    config_path.write_text("model: yaml-model\n", encoding="utf-8")
+
+    config = _get_user_config()
+
+    assert config == {"model": "yaml-model"}
+
+
+def test_get_user_config_prefers_toml_over_yaml(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    xdg_config_home = tmp_path / "xdg-config"
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config_home))
+
+    config_dir = xdg_config_home / "llm_code"
+    config_dir.mkdir(parents=True)
+    (config_dir / "config.toml").write_text('model = "toml-model"\n', encoding="utf-8")
+    (config_dir / "config.yaml").write_text("model: yaml-model\n", encoding="utf-8")
+
+    config = _get_user_config()
+
+    assert config == {"model": "toml-model"}

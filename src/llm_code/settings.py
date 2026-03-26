@@ -4,13 +4,17 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class Settings(BaseModel):
     """Application settings loaded from defaults, config files, and environment."""
 
     model: str = "openai-responses:gpt-5.3-codex"
+    api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("api_key", "OPENAI_API_KEY"),
+    )
 
     @classmethod
     def load(
@@ -39,11 +43,13 @@ def _get_user_config() -> dict[str, Any]:
     else:
         base_dir = Path.home() / ".config"
 
-    config_path = base_dir / "llm_code" / "config.toml"
-    if not config_path.is_file():
-        return {}
+    config_dir = base_dir / "llm_code"
+    for filename in ("config.toml", "config.yaml"):
+        config_path = config_dir / filename
+        if config_path.is_file():
+            return _load_config_file(config_path)
 
-    return _load_config_file(config_path)
+    return {}
 
 
 def _get_project_config(*, cwd: Path | None = None) -> dict[str, Any]:
@@ -74,6 +80,11 @@ def _load_config_file(path: Path) -> dict[str, Any]:
     return data
 
 
+_ENV_ALIASES: dict[str, list[str]] = {
+    "api_key": ["OPENAI_API_KEY"],
+}
+
+
 def _load_env_overrides(
     *,
     env: dict[str, str],
@@ -86,5 +97,10 @@ def _load_env_overrides(
         env_name = field_name.upper()
         if env_name in env:
             overrides[field_name] = env[env_name]
+        else:
+            for alias in _ENV_ALIASES.get(field_name, []):
+                if alias in env:
+                    overrides[field_name] = env[alias]
+                    break
 
     return overrides

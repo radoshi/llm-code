@@ -15,21 +15,34 @@ from typing import Any
 
 from pydantic_ai import Agent
 from pydantic_ai.capabilities import Thinking
+from pydantic_ai.models import infer_model
+from pydantic_ai.providers import infer_provider_class
 
 DEFAULT_INSTRUCTIONS = "You are an expert at coding."
 
 
-def build_agent(model: str) -> Agent:
+def build_agent(model: str, *, api_key: str | None = None) -> Agent:
     """Build an agent configured with local filesystem and shell tools.
 
     Args:
         model: The model identifier passed to ``pydantic_ai.Agent``.
+        api_key: Optional API key passed to the model provider.
 
     Returns:
         An agent instance with read, write, search, and bash tools registered.
     """
+    if api_key is not None:
+
+        def provider_factory(provider_name: str):
+            provider_cls = infer_provider_class(provider_name)
+            return provider_cls(api_key=api_key)
+
+        resolved = infer_model(model, provider_factory=provider_factory)
+    else:
+        resolved = model
+
     agent = Agent(
-        model,
+        resolved,
         instructions=DEFAULT_INSTRUCTIONS,
         capabilities=[Thinking(effort="high")],
     )

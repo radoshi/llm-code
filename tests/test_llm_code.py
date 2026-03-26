@@ -1,8 +1,10 @@
 import json
+from types import SimpleNamespace
 
+from click.testing import CliRunner
 from pydantic_ai.messages import FunctionToolCallEvent, ToolCallPart
 
-from llm_code.llm_code import _format_tool_call_status, _tool_args_as_dict
+from llm_code.llm_code import _format_tool_call_status, _tool_args_as_dict, main
 
 
 def test_tool_args_as_dict_returns_dict_input() -> None:
@@ -75,3 +77,49 @@ def test_format_tool_call_status_for_bash_is_human_friendly() -> None:
     result = _format_tool_call_status(event)
 
     assert result == "[yellow]Bash[/yellow] uv run pytest"
+
+
+def test_main_runs_prompt_when_prompt_is_given(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "llm_code.llm_code.Settings.load",
+        lambda: SimpleNamespace(model="test-model", api_key=None),
+    )
+
+    called: dict[str, str] = {}
+
+    async def fake_run_prompt(
+        prompt: str, *, console, model: str, api_key: str | None = None
+    ) -> None:
+        called["prompt"] = prompt
+        called["model"] = model
+        called["console_type"] = type(console).__name__
+
+    monkeypatch.setattr("llm_code.llm_code.run_prompt", fake_run_prompt)
+
+    result = CliRunner().invoke(main, ["hello", "world"])
+
+    assert result.exit_code == 0
+    assert called == {
+        "prompt": "hello world",
+        "model": "test-model",
+        "console_type": "Console",
+    }
+
+
+def test_main_launches_tui_when_no_prompt_is_given(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "llm_code.llm_code.Settings.load",
+        lambda: SimpleNamespace(model="test-model", api_key=None),
+    )
+
+    called: dict[str, str] = {}
+
+    def fake_launch_tui(*, model: str, api_key: str | None = None) -> None:
+        called["model"] = model
+
+    monkeypatch.setattr("llm_code.llm_code.launch_tui", fake_launch_tui)
+
+    result = CliRunner().invoke(main, [])
+
+    assert result.exit_code == 0
+    assert called == {"model": "test-model"}
